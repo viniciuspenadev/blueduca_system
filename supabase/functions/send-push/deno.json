@@ -1,0 +1,5 @@
+{
+    "imports": {
+        "web-push": "https://esm.sh/@push-api/web-push@0.1.0?bundle"
+    }
+}
