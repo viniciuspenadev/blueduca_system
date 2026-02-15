@@ -102,8 +102,8 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
                         routine_data: {
                             meals: { breakfast: '', lunch: '', snack: '' },
                             sleep: { nap: '', duration: '' },
-                            hygiene: { status: '', diapers: 0 },
-                            mood: 'Feliz'
+                            hygiene: { status: '', diapers: null },
+                            mood: ''
                         },
                         homework: '', activities: '', observations: ''
                     };
@@ -298,7 +298,7 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
 
             {/* Mobile FAB - Floating Save Button */}
             {canEdit && (
-                <div className="md:hidden fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4">
+                <div className="md:hidden fixed bottom-24 right-6 z-50 animate-in slide-in-from-bottom-4">
                     <button
                         onClick={handleSaveAll}
                         disabled={saving}
@@ -616,13 +616,22 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
                                                         </div>
                                                         <div className="bg-white p-2 rounded-lg border border-slate-200">
                                                             <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Duração</span>
-                                                            <input
-                                                                type="text"
-                                                                placeholder="Ex: 1h 30min"
-                                                                className="w-full text-xs bg-transparent border-none p-0 font-medium text-slate-700 focus:ring-0"
+                                                            <select
+                                                                disabled={!canEdit}
+                                                                className="w-full text-xs bg-transparent border-none p-0 font-medium text-slate-700 focus:ring-0 cursor-pointer disabled:opacity-50"
                                                                 value={routine.sleep?.duration || ''}
                                                                 onChange={(e) => updateReport(item.student_id, 'sleep.duration', e.target.value, true)}
-                                                            />
+                                                            >
+                                                                <option value="">---</option>
+                                                                <option value="0">0h (Não dormiu)</option>
+                                                                <option value="30min">30min</option>
+                                                                <option value="1h">1h</option>
+                                                                <option value="1h 30min">1h 30min</option>
+                                                                <option value="2h">2h</option>
+                                                                <option value="2h 30min">2h 30min</option>
+                                                                <option value="3h">3h</option>
+                                                                <option value="4h +">4h +</option>
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -649,14 +658,17 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
                                                         </div>
                                                         <div className="bg-white p-2 rounded-lg border border-slate-200">
                                                             <span className="text-[9px] font-black text-slate-400 uppercase block mb-1">Trocas de Fralda</span>
-                                                            <input
+                                                            <select
                                                                 disabled={!canEdit}
-                                                                type="number"
-                                                                min="0"
-                                                                className="w-full text-xs bg-transparent border-none p-0 font-medium text-slate-700 focus:ring-0 disabled:opacity-50"
-                                                                value={routine.hygiene?.diapers || 0}
-                                                                onChange={(e) => updateReport(item.student_id, 'hygiene.diapers', parseInt(e.target.value) || 0, true)}
-                                                            />
+                                                                className="w-full text-xs bg-transparent border-none p-0 font-medium text-slate-700 focus:ring-0 cursor-pointer disabled:opacity-50"
+                                                                value={routine.hygiene?.diapers ?? ''}
+                                                                onChange={(e) => updateReport(item.student_id, 'hygiene.diapers', e.target.value === '' ? null : parseInt(e.target.value), true)}
+                                                            >
+                                                                <option value="">---</option>
+                                                                {[0, 1, 2, 3, 4, 5, 6].map(num => (
+                                                                    <option key={num} value={num}>{num === 6 ? '6+' : num}</option>
+                                                                ))}
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 </div>

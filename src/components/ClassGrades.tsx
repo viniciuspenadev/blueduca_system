@@ -1,8 +1,9 @@
 
 import { type FC, useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
+import { planningService } from '../services/planningService';
 import { Button, Input } from './ui';
-import { Loader2, Plus, Trash2, FileText, ChevronDown, Save, LayoutGrid, List as ListIcon, Calendar } from 'lucide-react';
+import { Loader2, Plus, FileText, ChevronDown, Save, Calendar } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,16 +17,13 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
     const { confirm } = useConfirm();
     const { currentSchool } = useAuth();
     const [loading, setLoading] = useState(true);
-    const [viewMode, setViewMode] = useState<'list' | 'matrix'>('matrix'); // Default to Matrix for Boletim view
-    const [selectedTerm, setSelectedTerm] = useState('1_bimestre');
+    const [periods, setPeriods] = useState<any[]>([]);
+    const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null);
 
     // Data
     const [assessments, setAssessments] = useState<any[]>([]);
     const [students, setStudents] = useState<any[]>([]);
-
-    // List View State
-    const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null);
-    const [gradesValues, setGradesValues] = useState<Record<string, number | string>>({}); // student_id -> score (for single assessment)
+    const [catalogSubjects, setCatalogSubjects] = useState<any[]>([]); // Matérias do catálogo
 
     // Matrix View State
     const [matrixGrades, setMatrixGrades] = useState<Record<string, Record<string, number | string>>>({}); // student_id -> { assessment_id: score }
@@ -34,48 +32,98 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
     // Shared State
     const [savingGrades, setSavingGrades] = useState(false);
 
+    // Descriptive Modal State
+    const [descriptiveModal, setDescriptiveModal] = useState<{
+        isOpen: boolean;
+        studentId: string;
+        assessmentId: string;
+        currentValue: string;
+        studentName: string;
+        assessmentTitle: string;
+    } | null>(null);
+    const [descriptiveText, setDescriptiveText] = useState('');
+
     // New Assessment State
     const [isCreateOpen, setIsCreateOpen] = useState(false);
     const [newAssessment, setNewAssessment] = useState({
         title: '',
-        term: '1_bimestre',
         subject: '',
+        assessment_type: 'numeric' as 'numeric' | 'concept' | 'descriptive' | 'diagnostic',
         max_score: 10,
         weight: 1,
         date: new Date().toLocaleDateString('en-CA')
     });
 
-    const TERMS = [
-        { id: '1_bimestre', label: '1º Bimestre' },
-        { id: '2_bimestre', label: '2º Bimestre' },
-        { id: '3_bimestre', label: '3º Bimestre' },
-        { id: '4_bimestre', label: '4º Bimestre' },
-    ];
+    // Fetch periods from database
+    const fetchPeriods = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('assessment_periods')
+                .select('*')
+                .eq('school_id', currentSchool?.id)
+                .order('period_number', { ascending: true });
 
-    const STANDARD_SUBJECTS = [
-        'Português', 'Matemática', 'História', 'Geografia', 'Ciências', 'Artes', 'Ed. Física', 'Inglês'
-    ];
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                setPeriods(data);
+                // Auto-select the first period if none is selected
+                if (!selectedPeriod) {
+                    setSelectedPeriod(data[0].id);
+                }
+            } else {
+                setPeriods([]);
+                setSelectedPeriod(null);
+            }
+        } catch (error) {
+            console.error(error);
+            setPeriods([]);
+        }
+    };
+
+    useEffect(() => {
+        if (currentSchool?.id) {
+            fetchPeriods();
+        }
+    }, [currentSchool?.id]);
 
     useEffect(() => {
         fetchAssessments();
         fetchStudents();
-    }, [classId, selectedTerm]); // Refetch when term changes
+        fetchCatalogSubjects(); // Buscar matérias do catálogo
+    }, [classId, selectedPeriod]); // Refetch when period changes
 
-    // Load full matrix data when switching to matrix view
+    const fetchCatalogSubjects = async () => {
+        try {
+            if (!currentSchool?.id) return;
+            const subjects = await planningService.getSubjects(currentSchool.id);
+            setCatalogSubjects(subjects);
+        } catch (error) {
+            console.error('Erro ao carregar catálogo de matérias:', error);
+            // Não mostra toast para não poluir UI, apenas loga
+        }
+    };
+
+    // Load matrix data when assessments or students change
     useEffect(() => {
-        if (viewMode === 'matrix' && assessments.length > 0) {
+        if (assessments.length > 0 && students.length > 0) {
             fetchMatrixGrades();
         }
-    }, [viewMode, assessments]);
+    }, [assessments, students]);
 
     const fetchAssessments = async () => {
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('grade_books')
-                .select('*')
-                .eq('class_id', classId)
-                .eq('term', selectedTerm) // Filter by Term
-                .order('subject', { ascending: true }); // Order by Subject
+                .select('*, period:assessment_periods(period_name, period_number)')
+                .eq('class_id', classId);
+
+            // Filter by period if one is selected
+            if (selectedPeriod) {
+                query = query.eq('period_id', selectedPeriod);
+            }
+
+            const { data, error } = await query.order('created_at', { ascending: true });
 
             if (error) throw error;
             setAssessments(data || []);
@@ -86,9 +134,22 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
     };
 
     const handleGenerateSubjects = async () => {
+        if (!selectedPeriod) {
+            addToast('error', 'Selecione um período primeiro.');
+            return;
+        }
+
+        // Verifica se há matérias no catálogo
+        if (catalogSubjects.length === 0) {
+            addToast('error', 'Nenhuma matéria cadastrada no catálogo. Configure em Configurações > Matérias.');
+            return;
+        }
+
+        const periodName = periods.find(p => p.id === selectedPeriod)?.period_name || 'Período';
+
         const isConfirmed = await confirm({
             title: 'Gerar Pauta',
-            message: `Deseja gerar automaticamente a pauta para o ${TERMS.find(t => t.id === selectedTerm)?.label}?`,
+            message: `Deseja gerar automaticamente a pauta para o ${periodName}?`,
             type: 'info',
             confirmText: 'Gerar'
         });
@@ -99,7 +160,9 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
         try {
             // Check existing subjects
             const existingSubjects = new Set(assessments.map(a => a.subject));
-            const subjectsToAdd = STANDARD_SUBJECTS.filter(s => !existingSubjects.has(s));
+            const subjectsToAdd = catalogSubjects
+                .map(s => s.name)
+                .filter(name => !existingSubjects.has(name));
 
             if (subjectsToAdd.length === 0) {
                 addToast('info', 'Todas as matérias já existem.');
@@ -107,11 +170,14 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                 return;
             }
 
+            const periodLabel = periods.find(p => p.id === selectedPeriod)?.period_name || 'Período';
+
             const newAssessments = subjectsToAdd.map(subject => ({
                 class_id: classId,
-                title: `${subject} - ${TERMS.find(t => t.id === selectedTerm)?.label}`,
-                term: selectedTerm,
+                title: `${subject} - ${periodLabel}`,
+                period_id: selectedPeriod,
                 subject: subject,
+                assessment_type: 'numeric', // Default to numeric
                 max_score: 10,
                 weight: 1,
                 date: new Date().toLocaleDateString('en-CA'),
@@ -151,89 +217,55 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
         }
     };
 
-    // --- LIST VIEW LOGIC ---
-
-    const fetchGrades = async (gradeBookId: string) => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('student_grades')
-                .select('student_id, score')
-                .eq('grade_book_id', gradeBookId);
-
-            if (error) throw error;
-
-            const map: any = {};
-            data?.forEach((g: any) => {
-                map[g.student_id] = g.score;
-            });
-            setGradesValues(map);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSaveGrades = async () => {
-        if (!selectedAssessment) return;
-        setSavingGrades(true);
-        try {
-            const records = Object.keys(gradesValues).map(studentId => ({
-                grade_book_id: selectedAssessment,
-                student_id: studentId,
-                score: gradesValues[studentId] === '' ? null : Number(gradesValues[studentId])
-            }));
-
-            const { error } = await supabase
-                .from('student_grades')
-                .upsert(records, { onConflict: 'grade_book_id,student_id' });
-
-            if (error) throw error;
-            addToast('success', 'Notas salvas!');
-        } catch (error: any) {
-            addToast('error', error.message);
-        } finally {
-            setSavingGrades(false);
-        }
-    };
-
-    const toggleAssessment = (id: string) => {
-        if (selectedAssessment === id) {
-            setSelectedAssessment(null);
-        } else {
-            setSelectedAssessment(id);
-            fetchGrades(id);
-        }
-    };
-
     // --- MATRIX VIEW LOGIC ---
 
     const fetchMatrixGrades = async () => {
+        if (assessments.length === 0) return;
+
         setLoading(true);
         try {
             const assessmentIds = assessments.map(a => a.id);
-            if (assessmentIds.length === 0) return;
-
-            const { data, error } = await supabase
+            const { data: grades, error } = await supabase
                 .from('student_grades')
-                .select('student_id, grade_book_id, score')
+                .select('student_id, grade_book_id, score_numeric, score_concept, score_descriptive, score_diagnostic')
                 .in('grade_book_id', assessmentIds);
 
             if (error) throw error;
 
-            // Build Matrix: StudentID -> { AssessmentID -> Score }
-            const matrix: Record<string, Record<string, number | string>> = {};
-
-            // Initialize for all students
+            // Build matrix
+            const matrix: Record<string, Record<string, any>> = {};
             students.forEach(s => {
                 matrix[s.student_id] = {};
             });
 
-            // Fill with data
-            data?.forEach((g: any) => {
+            // Fill with data - map to correct field based on assessment type
+            grades?.forEach(g => {
                 if (!matrix[g.student_id]) matrix[g.student_id] = {};
-                matrix[g.student_id][g.grade_book_id] = g.score;
+
+                // Find the assessment to get its type
+                const assessment = assessments.find(a => a.id === g.grade_book_id);
+                if (!assessment) return;
+
+                // Get the correct score based on type
+                let scoreValue: any = null;
+                switch (assessment.assessment_type) {
+                    case 'numeric':
+                        scoreValue = g.score_numeric;
+                        break;
+                    case 'concept':
+                        scoreValue = g.score_concept;
+                        break;
+                    case 'descriptive':
+                        scoreValue = g.score_descriptive;
+                        break;
+                    case 'diagnostic':
+                        scoreValue = g.score_diagnostic;
+                        break;
+                    default:
+                        scoreValue = g.score_numeric; // Default to numeric
+                }
+
+                matrix[g.student_id][g.grade_book_id] = scoreValue;
             });
 
             setMatrixGrades(matrix);
@@ -261,17 +293,51 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
         if (matrixChanges.size === 0) return;
         setSavingGrades(true);
         try {
+            // Get current user for auditing
+            const { data: { user } } = await supabase.auth.getUser();
             // Convert matrix back to records, but ONLY for changed cells
             const records: any[] = [];
 
             Array.from(matrixChanges).forEach(key => {
                 const [studentId, assessmentId] = key.split('|');
                 const scoreVal = matrixGrades[studentId]?.[assessmentId];
-                records.push({
+
+                // Find the assessment to get its type
+                const assessment = assessments.find(a => a.id === assessmentId);
+                const assessmentType = assessment?.assessment_type || 'numeric';
+
+                const baseRecord: any = {
                     grade_book_id: assessmentId,
                     student_id: studentId,
-                    score: scoreVal === '' || scoreVal === undefined ? null : Number(scoreVal)
-                });
+                    school_id: currentSchool?.id,
+                    created_by: user?.id
+                };
+
+                // Map to correct field based on type
+                switch (assessmentType) {
+                    case 'numeric':
+                        baseRecord.score_numeric = scoreVal === '' || scoreVal === undefined ? null : Number(scoreVal);
+                        break;
+                    case 'concept':
+                        baseRecord.score_concept = scoreVal || null;
+                        break;
+                    case 'descriptive':
+                        baseRecord.score_descriptive = scoreVal || null;
+                        break;
+                    case 'diagnostic':
+                        try {
+                            const value = String(scoreVal || '');
+                            baseRecord.score_diagnostic = value ? JSON.parse(value) : null;
+                        } catch {
+                            baseRecord.score_diagnostic = null;
+                        }
+                        break;
+                    default:
+                        // Fallback for old system
+                        baseRecord.score = scoreVal === '' || scoreVal === undefined ? null : Number(scoreVal);
+                }
+
+                records.push(baseRecord);
             });
 
             if (records.length === 0) return;
@@ -297,20 +363,41 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
     const handleCreateAssessment = async () => {
         if (!newAssessment.title) return;
         try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const assessmentData: any = {
+                class_id: classId,
+                school_id: currentSchool?.id,
+                title: newAssessment.title,
+                subject: newAssessment.subject,
+                assessment_type: newAssessment.assessment_type,
+                max_score: newAssessment.max_score,
+                weight: newAssessment.weight,
+                date: newAssessment.date,
+                created_by: user?.id
+            };
+
+            // Require period selection
+            if (!selectedPeriod) {
+                addToast('error', 'Selecione um período primeiro.');
+                return;
+            }
+
+            assessmentData.period_id = selectedPeriod;
+
             const { error } = await supabase
                 .from('grade_books')
-                .insert({
-                    class_id: classId,
-                    school_id: currentSchool?.id,
-                    ...newAssessment
-                });
+                .insert(assessmentData);
 
             if (error) throw error;
 
             addToast('success', 'Avaliação criada!');
             setIsCreateOpen(false);
             setNewAssessment({
-                title: '', term: '1_bimestre', subject: '', max_score: 10, weight: 1,
+                title: '',
+                subject: '',
+                assessment_type: 'numeric',
+                max_score: 10,
+                weight: 1,
                 date: new Date().toLocaleDateString('en-CA')
             });
             fetchAssessments();
@@ -319,36 +406,7 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
         }
     };
 
-    const handleDeleteAssessment = async (id: string) => {
-        const isConfirmed = await confirm({
-            title: 'Excluir Avaliação',
-            message: 'Tem certeza que deseja excluir esta avaliação e todas as notas associadas?',
-            type: 'danger',
-            confirmText: 'Excluir'
-        });
-
-        if (!isConfirmed) return;
-        try {
-            const { error } = await supabase.from('grade_books').delete().eq('id', id);
-            if (error) throw error;
-            addToast('success', 'Avaliação excluída.');
-            fetchAssessments();
-            // If in matrix mode, we should reload matrix too
-            if (viewMode === 'matrix') fetchMatrixGrades();
-            if (selectedAssessment === id) setSelectedAssessment(null);
-        } catch (error: any) {
-            addToast('error', error.message);
-        }
-    };
-
     // --- RENDER ---
-
-    const termLabels: any = {
-        '1_bimestre': '1º Bimestre',
-        '2_bimestre': '2º Bimestre',
-        '3_bimestre': '3º Bimestre',
-        '4_bimestre': '4º Bimestre'
-    };
 
     return (
         <div className="space-y-6">
@@ -361,28 +419,13 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                     <p className="text-xs text-gray-500 mt-1">Gerencie provas, trabalhos e lançamentos.</p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
-                    <button
-                        onClick={() => setViewMode('list')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <ListIcon className="w-4 h-4" /> Lista
-                    </button>
-                    <button
-                        onClick={() => setViewMode('matrix')}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${viewMode === 'matrix' ? 'bg-white text-brand-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                        <LayoutGrid className="w-4 h-4" /> Grade Geral
-                    </button>
-                </div>
-
                 <div className="flex gap-2 w-full md:w-auto">
                     {assessments.length === 0 && (
                         <Button variant="ghost" onClick={handleGenerateSubjects} className="text-brand-600 bg-brand-50 hover:bg-brand-100 border border-brand-200">
                             <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Gerar Pauta</span>
                         </Button>
                     )}
-                    {viewMode === 'matrix' && matrixChanges.size > 0 && (
+                    {matrixChanges.size > 0 && (
                         <Button onClick={saveMatrixGrades} disabled={savingGrades} className="bg-green-600 hover:bg-green-700 text-white shadow-md animate-pulse">
                             {savingGrades ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                             Salvar ({matrixChanges.size})
@@ -408,17 +451,21 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                             <Input placeholder="Ex: Prova de Matemática - Cap. 1" value={newAssessment.title} onChange={e => setNewAssessment({ ...newAssessment, title: e.target.value })} className="h-11" />
                         </div>
                         <div className="md:col-span-3">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Bimestre</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">
+                                Período
+                            </label>
                             <div className="relative">
                                 <select
                                     className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none appearance-none font-medium text-gray-700"
-                                    value={newAssessment.term}
-                                    onChange={e => setNewAssessment({ ...newAssessment, term: e.target.value })}
+                                    value={selectedPeriod || ''}
+                                    onChange={e => setSelectedPeriod(e.target.value)}
                                 >
-                                    <option value="1_bimestre">1º Bimestre</option>
-                                    <option value="2_bimestre">2º Bimestre</option>
-                                    <option value="3_bimestre">3º Bimestre</option>
-                                    <option value="4_bimestre">4º Bimestre</option>
+                                    {periods.length === 0 && <option value="">Nenhum período cadastrado</option>}
+                                    {periods.map(period => (
+                                        <option key={period.id} value={period.id}>
+                                            {period.period_name}
+                                        </option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                             </div>
@@ -430,14 +477,34 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                                 <Calendar className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
                             </div>
                         </div>
-                        <div className="md:col-span-3">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nota Máxima</label>
-                            <Input type="number" placeholder="10.0" value={newAssessment.max_score} onChange={e => setNewAssessment({ ...newAssessment, max_score: Number(e.target.value) })} className="h-11 text-center font-mono" />
+                        <div className="md:col-span-4">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Tipo de Avaliação</label>
+                            <div className="relative">
+                                <select
+                                    className="w-full h-11 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none appearance-none font-medium text-gray-700"
+                                    value={newAssessment.assessment_type}
+                                    onChange={e => setNewAssessment({ ...newAssessment, assessment_type: e.target.value as any })}
+                                >
+                                    <option value="numeric">Numérico (0-10)</option>
+                                    <option value="concept">Conceitual (A-E)</option>
+                                    <option value="descriptive">Descritivo (Parecer)</option>
+                                    <option value="diagnostic">Diagnóstico (Sondagem)</option>
+                                </select>
+                                <ChevronDown className="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+                            </div>
                         </div>
-                        <div className="md:col-span-3">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Peso</label>
-                            <Input type="number" placeholder="1" value={newAssessment.weight} onChange={e => setNewAssessment({ ...newAssessment, weight: Number(e.target.value) })} className="h-11 text-center font-mono" />
-                        </div>
+                        {newAssessment.assessment_type === 'numeric' && (
+                            <>
+                                <div className="md:col-span-4">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Nota Máxima</label>
+                                    <Input type="number" placeholder="10.0" value={newAssessment.max_score} onChange={e => setNewAssessment({ ...newAssessment, max_score: Number(e.target.value) })} className="h-11 text-center font-mono" />
+                                </div>
+                                <div className="md:col-span-4">
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Peso</label>
+                                    <Input type="number" placeholder="1" value={newAssessment.weight} onChange={e => setNewAssessment({ ...newAssessment, weight: Number(e.target.value) })} className="h-11 text-center font-mono" />
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                         <Button variant="ghost" onClick={() => setIsCreateOpen(false)} className="hover:bg-gray-100 text-gray-500">Cancelar</Button>
@@ -446,22 +513,29 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                 </div>
             )}
 
-            {/* Term Selector */}
-            <div className="flex px-1 gap-2 overflow-x-auto pb-2 -mx-4 md:mx-0 px-4 md:px-0 no-scrollbar">
-                {TERMS.map(term => (
-                    <button
-                        key={term.id}
-                        onClick={() => setSelectedTerm(term.id)}
-                        className={`
-                            px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all
-                            ${selectedTerm === term.id
-                                ? 'bg-brand-600 text-white shadow-md shadow-brand-200'
-                                : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'}
-                        `}
-                    >
-                        {term.label}
-                    </button>
-                ))}
+            {/* Period Selector */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                <Calendar className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                {periods.length > 0 ? (
+                    periods.map(period => (
+                        <button
+                            key={period.id}
+                            onClick={() => setSelectedPeriod(period.id)}
+                            className={`
+                                        px-4 py-2 rounded-full whitespace-nowrap text-sm font-bold transition-all
+                                        ${selectedPeriod === period.id
+                                    ? 'bg-brand-600 text-white shadow-md shadow-brand-200'
+                                    : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-100'}
+                                    `}
+                        >
+                            {period.period_name}
+                        </button>
+                    ))
+                ) : (
+                    <span className="text-sm text-gray-400 italic">
+                        Nenhum período cadastrado. Configure os períodos nas configurações da escola.
+                    </span>
+                )}
             </div>
 
             {/* Loading State */}
@@ -472,81 +546,12 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                 </div>
             ) : (
                 <>
-                    {/* VIEW MODE: LIST */}
-                    {viewMode === 'list' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            {assessments.length === 0 ? (
-                                <div className="p-12 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">
-                                    Nenhuma avaliação neste bimestre.
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {assessments.map(assessment => {
-                                        const isOpen = selectedAssessment === assessment.id;
-                                        return (
-                                            <div key={assessment.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow cursor-pointer relative group" onClick={() => toggleAssessment(assessment.id)}>
-                                                <div className="absolute top-4 right-4 flex gap-2">
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteAssessment(assessment.id); }}
-                                                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                                                        title="Excluir Avaliação"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-
-                                                <div className="flex justify-between items-start mb-4 pr-10">
-                                                    <div className="p-3 bg-brand-50 rounded-xl">
-                                                        <FileText className="w-6 h-6 text-brand-600" />
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-lg">
-                                                            {termLabels[assessment.term]}
-                                                        </span>
-                                                        <span className="bg-blue-50 text-brand-600 text-xs font-bold px-2 py-1 rounded-lg">
-                                                            Peso {assessment.weight}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <h3 className="font-bold text-gray-900 text-lg mb-1">{assessment.title}</h3>
-                                                <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                                                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(assessment.date).toLocaleDateString()}</span>
-                                                    <span className="flex items-center gap-1">Max: {assessment.max_score}</span>
-                                                </div>
-
-                                                {/* Inline Grade Editor for List View (Simplified) */}
-                                                {isOpen && (
-                                                    <div className="mt-4 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-                                                        <p className="text-xs font-bold text-gray-500 uppercase mb-2">Lançamento Rápido</p>
-                                                        <div className="max-h-60 overflow-y-auto space-y-2">
-                                                            {students.map(student => (
-                                                                <div key={student.student_id} className="flex justify-between items-center text-sm">
-                                                                    <span>{student.student?.name}</span>
-                                                                    <Input
-                                                                        className="w-20 h-8 text-center"
-                                                                        type="number"
-                                                                        value={gradesValues[student.student_id] ?? ''}
-                                                                        onChange={(e) => setGradesValues(prev => ({ ...prev, [student.student_id]: e.target.value }))}
-                                                                        placeholder="-"
-                                                                    />
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                        <Button onClick={handleSaveGrades} disabled={savingGrades} className="w-full mt-4 bg-brand-600 text-white">
-                                                            Salvar Notas
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                    {/* MATRIX VIEW (GRADE GERAL) */}
+                    {assessments.length === 0 ? (
+                        <div className="p-12 text-center text-gray-500 border-2 border-dashed border-gray-200 rounded-xl">
+                            Nenhuma avaliação neste período.
                         </div>
-                    )}
-
-                    {/* VIEW MODE: MATRIX */}
-                    {viewMode === 'matrix' && (
+                    ) : (
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm">
@@ -600,24 +605,87 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                                                     {assessments.map((a) => {
                                                         const score = matrixGrades[student.student_id]?.[a.id] ?? '';
                                                         const isChanged = matrixChanges.has(`${student.student_id}|${a.id}`);
+                                                        const assessmentType = a.assessment_type || 'numeric';
 
                                                         return (
                                                             <td key={a.id} className="p-2 text-center border-l border-dashed border-gray-100">
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max={a.max_score}
-                                                                    step="0.1"
-                                                                    value={score}
-                                                                    onChange={(e) => updateMatrixGrade(student.student_id, a.id, e.target.value)}
-                                                                    className={`w-16 text-center font-bold rounded-lg py-1.5 outline-none transition-all
-                                                                ${score === '' ? 'bg-gray-50 text-gray-400 hover:bg-gray-100' : ''}
-                                                                ${score !== '' && Number(score) >= 6 ? 'text-green-700 bg-green-50 focus:bg-white focus:ring-2 focus:ring-green-200' : ''}
-                                                                ${score !== '' && Number(score) < 6 ? 'text-red-600 bg-red-50 focus:bg-white focus:ring-2 focus:ring-red-200' : ''}
-                                                                ${isChanged ? 'ring-2 ring-amber-400 bg-amber-50' : ''}
-                                                            `}
-                                                                    placeholder="-"
-                                                                />
+                                                                {/* Numeric Input */}
+                                                                {assessmentType === 'numeric' && (
+                                                                    <input
+                                                                        type="number"
+                                                                        min="0"
+                                                                        max={a.max_score}
+                                                                        step="0.1"
+                                                                        value={score}
+                                                                        onChange={(e) => updateMatrixGrade(student.student_id, a.id, e.target.value)}
+                                                                        className={`w-full px-2 py-1.5 text-center rounded-lg border transition-all ${isChanged
+                                                                            ? 'border-green-400 bg-green-50 ring-2 ring-green-200'
+                                                                            : 'border-gray-200 bg-gray-50 hover:border-brand-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200'
+                                                                            } outline-none font-mono text-sm`}
+                                                                    />
+                                                                )}
+
+                                                                {/* Concept Select */}
+                                                                {assessmentType === 'concept' && (
+                                                                    <select
+                                                                        value={score}
+                                                                        onChange={(e) => updateMatrixGrade(student.student_id, a.id, e.target.value)}
+                                                                        className={`w-full px-2 py-1.5 text-center rounded-lg border transition-all ${isChanged
+                                                                            ? 'border-green-400 bg-green-50 ring-2 ring-green-200'
+                                                                            : 'border-gray-200 bg-gray-50 hover:border-brand-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200'
+                                                                            } outline-none font-medium text-sm`}
+                                                                    >
+                                                                        <option value="">-</option>
+                                                                        <option value="A">A</option>
+                                                                        <option value="B">B</option>
+                                                                        <option value="C">C</option>
+                                                                        <option value="D">D</option>
+                                                                        <option value="E">E</option>
+                                                                    </select>
+                                                                )}
+
+                                                                {/* Descriptive - Show indicator only */}
+                                                                {assessmentType === 'descriptive' && (
+                                                                    <div className="flex items-center justify-center">
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setDescriptiveText(String(score || ''));
+                                                                                setDescriptiveModal({
+                                                                                    isOpen: true,
+                                                                                    studentId: student.student_id,
+                                                                                    assessmentId: a.id,
+                                                                                    currentValue: String(score || ''),
+                                                                                    studentName: student.student?.name || '',
+                                                                                    assessmentTitle: a.title
+                                                                                });
+                                                                            }}
+                                                                            className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${score
+                                                                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                                                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                                                                } ${isChanged ? 'ring-2 ring-green-400' : ''}`}
+                                                                        >
+                                                                            {score ? '✓ Parecer' : '+ Parecer'}
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Diagnostic - Not supported in matrix */}
+                                                                {assessmentType === 'diagnostic' && (
+                                                                    <span className="text-xs text-gray-400 italic">N/A</span>
+                                                                )}
+
+                                                                {/* Fallback for undefined type */}
+                                                                {!assessmentType && (
+                                                                    <input
+                                                                        type="number"
+                                                                        value={score}
+                                                                        onChange={(e) => updateMatrixGrade(student.student_id, a.id, e.target.value)}
+                                                                        className={`w-full px-2 py-1.5 text-center rounded-lg border transition-all ${isChanged
+                                                                            ? 'border-green-400 bg-green-50 ring-2 ring-green-200'
+                                                                            : 'border-gray-200 bg-gray-50 hover:border-brand-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-200'
+                                                                            } outline-none font-mono text-sm`}
+                                                                    />
+                                                                )}
                                                             </td>
                                                         );
                                                     })}
@@ -655,7 +723,100 @@ export const ClassGrades: FC<ClassGradesProps> = ({ classId }) => {
                     )}
                 </>
             )}
+
+            {/* Descriptive Assessment Modal */}
+            {descriptiveModal?.isOpen && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-scale-up">
+                        {/* Header */}
+                        <div className="p-6 border-b border-gray-100">
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">
+                                Parecer Descritivo
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                <span className="font-medium text-gray-700">{descriptiveModal.studentName}</span>
+                                {' • '}
+                                <span className="text-gray-600">{descriptiveModal.assessmentTitle}</span>
+                            </p>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Digite o parecer descritivo para este aluno:
+                            </label>
+                            <textarea
+                                value={descriptiveText}
+                                onChange={(e) => setDescriptiveText(e.target.value)}
+                                placeholder="Ex: O aluno demonstrou excelente compreensão dos conceitos apresentados..."
+                                className="w-full h-40 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none resize-none text-sm"
+                                autoFocus
+                            />
+                            <p className="text-xs text-gray-400 mt-2">
+                                {descriptiveText.length} caracteres
+                            </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-gray-100 flex gap-3 justify-end">
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setDescriptiveModal(null);
+                                    setDescriptiveText('');
+                                }}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                className="bg-brand-600 text-white"
+                                onClick={async () => {
+                                    if (descriptiveModal) {
+                                        try {
+
+
+                                            // Get current user for auditing
+                                            const { data: { user } } = await supabase.auth.getUser();
+
+                                            // Save directly to database
+                                            const { error } = await supabase
+                                                .from('student_grades')
+                                                .upsert({
+                                                    grade_book_id: descriptiveModal.assessmentId,
+                                                    student_id: descriptiveModal.studentId,
+                                                    school_id: currentSchool?.id,
+                                                    score_descriptive: descriptiveText || null,
+                                                    status: 'published',
+                                                    created_by: user?.id
+                                                }, { onConflict: 'grade_book_id,student_id' })
+                                                .select();
+
+                                            if (error) throw error;
+
+                                            // Update local state to reflect the change
+                                            setMatrixGrades(prev => ({
+                                                ...prev,
+                                                [descriptiveModal.studentId]: {
+                                                    ...prev[descriptiveModal.studentId],
+                                                    [descriptiveModal.assessmentId]: descriptiveText
+                                                }
+                                            }));
+
+                                            addToast('success', 'Parecer salvo com sucesso!');
+                                            setDescriptiveModal(null);
+                                            setDescriptiveText('');
+                                        } catch (error: any) {
+                                            addToast('error', error.message || 'Erro ao salvar parecer');
+                                        }
+                                    }
+                                }}
+                            >
+                                Salvar Parecer
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
-

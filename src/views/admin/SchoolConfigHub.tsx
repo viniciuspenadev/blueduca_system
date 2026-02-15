@@ -11,6 +11,7 @@ import {
     DollarSign,
     Users,
     Calendar,
+    CalendarDays,
     BookOpen,
     Clock,
     FileText,
@@ -23,6 +24,7 @@ import { SchoolInfoSettings } from './SchoolInfoSettings';
 import { CommunicationSettings } from './CommunicationSettings';
 import { FinancialSettingsTab } from './FinancialSettingsTab';
 import { AcademicYearsSettings } from './AcademicYearsSettings';
+import { AssessmentPeriodsSettings } from './AssessmentPeriodsSettings';
 import { SubjectCatalog } from './SubjectCatalog';
 import { SystemBehaviorSettings } from './SystemBehaviorSettings';
 import { TimelineSettings } from './TimelineSettings';
@@ -64,6 +66,7 @@ export const SchoolConfigHub: FC = () => {
         { id: 'users', label: 'Usuários', icon: Users },
         { id: 'acad_general', label: 'Agendas', icon: Settings },
         { id: 'acad_years', label: 'Anos Letivos', icon: Calendar },
+        { id: 'acad_periods', label: 'Períodos de Avaliação', icon: CalendarDays },
         { id: 'acad_subjects', label: 'Matérias', icon: BookOpen },
         { id: 'acad_timelines', label: 'Rotinas', icon: Clock },
         { id: 'acad_docs', label: 'Documentos', icon: FileText },
@@ -230,6 +233,14 @@ export const SchoolConfigHub: FC = () => {
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">Anos Letivos</h2>
                         <p className="text-sm text-gray-500 mb-8 border-b border-gray-100 pb-4">Gestão de calendários e períodos escolares.</p>
                         <AcademicYearsSettings />
+                    </div>
+                )}
+
+                {activeTab === 'acad_periods' && (
+                    <div className="animate-fade-in">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">Períodos de Avaliação</h2>
+                        <p className="text-sm text-gray-500 mb-8 border-b border-gray-100 pb-4">Configure os períodos para lançamento de notas e avaliações.</p>
+                        <AssessmentPeriodsSettings />
                     </div>
                 )}
 

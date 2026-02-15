@@ -1,7 +1,7 @@
 import { type FC, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
-import { Button, Input, Modal, Badge } from '../components/ui';
+import { Button, Input, Modal } from '../components/ui';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../contexts/ConfirmContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,7 +29,13 @@ import {
     Edit,
     LogOut,
     X,
-    Star
+    Star,
+    UserCheck,
+    Sunrise,
+    UsersRound,
+    MoreVertical,
+    CheckCircle,
+    ClipboardCheck
 } from 'lucide-react';
 import type { Class, ClassEnrollment } from '../types';
 
@@ -64,13 +70,18 @@ export const ClassDetailsView: FC = () => {
     const [teacherSearch, setTeacherSearch] = useState('');
     const [availableTeachers, setAvailableTeachers] = useState<any[]>([]);
 
-    const [mobileActiveTab, setMobileActiveTab] = useState<'attendance' | 'diary' | 'grades' | 'planning'>('diary');
+    // Student Table States
+    const [studentSearchTerm, setStudentSearchTerm] = useState('');
+    const [studentStatusFilter, setStudentStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+    const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
 
-    // Simplified Mobile Tab Sync
-    useEffect(() => {
-        if (mobileActiveTab === 'attendance') setActiveTab('attendance');
-        else if (mobileActiveTab === 'diary') setActiveTab('diary');
-    }, [mobileActiveTab]);
+    // Attendance data map: student_id -> attendance info
+    const [attendanceData, setAttendanceData] = useState<Map<string, any>>(new Map());
+
+    const [mobileActiveTab, setMobileActiveTab] = useState<'students' | 'attendance' | 'diary' | 'grades' | 'planning'>('diary');
+
 
     // Edit Class Modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -226,8 +237,12 @@ export const ClassDetailsView: FC = () => {
                 .from('class_enrollments')
                 .select(`
                     *,
-                    student:students(id, name, photo_url),
-                    enrollment:enrollments(id, status)
+                    student:students(
+                        id, 
+                        name, 
+                        photo_url,
+                        financial_responsible
+                    )
                 `)
                 .eq('class_id', id);
 
@@ -235,6 +250,37 @@ export const ClassDetailsView: FC = () => {
             setEnrollments(data);
         } catch (error) {
             console.error(error);
+        }
+    };
+
+    const fetchAttendanceData = async () => {
+        if (!classData || !currentSchool) return;
+
+        try {
+            // Buscar dados de frequência da view
+            const { data, error } = await supabase
+                .from('attendance_dashboard_view')
+                .select('*')
+                .eq('school_year', classData.school_year)
+                .eq('school_id', currentSchool.id);
+
+            if (error) throw error;
+
+            // Criar mapa de student_id -> attendance data
+            const attendanceMap = new Map();
+            data?.forEach((item: any) => {
+                attendanceMap.set(item.student_id, {
+                    attendance_rate: item.attendance_rate || 0,
+                    present_count: item.present_count || 0,
+                    absent_count: item.absent_count || 0,
+                    total_records: item.total_records || 0,
+                    last_attendance_date: item.last_attendance_date
+                });
+            });
+
+            setAttendanceData(attendanceMap);
+        } catch (error) {
+            console.error('Error fetching attendance data:', error);
         }
     };
 
@@ -446,6 +492,13 @@ export const ClassDetailsView: FC = () => {
         if (isAddTeacherOpen) fetchAvailableTeachers();
     }, [isAddTeacherOpen]);
 
+    // Fetch attendance data when classData is available
+    useEffect(() => {
+        if (classData && currentSchool) {
+            fetchAttendanceData();
+        }
+    }, [classData, currentSchool]);
+
     if (loading) return <div className="p-8 text-center text-gray-500">Carregando...</div>;
     if (!classData) return null;
 
@@ -454,31 +507,26 @@ export const ClassDetailsView: FC = () => {
             {/* =================================================================================
                 DESKTOP VIEW (Header, Stats, Tabs and Main Content)
                ================================================================================= */}
-            <div className="hidden md:block space-y-4 lg:space-y-8 animate-fade-in pb-20">
-                {/* Header / Hero */}
-                <div className="relative bg-white rounded-3xl border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden">
-                    {/* Background layers */}
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-800 opacity-95" />
-                    <div className="absolute top-0 right-0 w-1/3 h-full bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)]" />
-                    <div className="absolute bottom-0 left-0 w-full h-32 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-
-                    <div className="relative pt-4 lg:pt-8 px-6 lg:px-10 pb-6 lg:pb-10">
-                        {/* Top Actions Layer */}
-                        <div className="flex justify-between items-center mb-4 lg:mb-10">
+            <div className="hidden md:block space-y-6 animate-fade-in pb-20">
+                {/* Header Corporativo */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="p-6 lg:p-8">
+                        {/* Top Actions */}
+                        <div className="flex justify-between items-center mb-6">
                             <Button
                                 variant="ghost"
-                                className="text-white hover:bg-white/20 hover:text-white bg-white/5 border border-white/10 px-4 lg:px-6 rounded-xl lg:rounded-2xl backdrop-blur-md text-xs lg:text-sm"
+                                className="text-slate-600 hover:bg-slate-50 border border-slate-200 px-4 rounded-lg"
                                 onClick={() => navigate('/turmas')}
                             >
-                                <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
+                                <ArrowLeft className="w-4 h-4 mr-2" />
                                 Voltar para Turmas
                             </Button>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 {(user?.role === 'ADMIN' || user?.role === 'SECRETARY') && (
                                     <Button
                                         variant="ghost"
-                                        className="text-white hover:bg-white/20 bg-white/5 border border-white/10 px-5 rounded-2xl backdrop-blur-md"
+                                        className="text-slate-600 hover:bg-slate-50 border border-slate-200 px-4 rounded-lg"
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
                                         <Edit className="w-4 h-4 mr-2" />
@@ -489,7 +537,7 @@ export const ClassDetailsView: FC = () => {
                                 {(user?.role === 'ADMIN' || user?.role === 'SECRETARY') && (
                                     <Button
                                         variant="ghost"
-                                        className="text-white hover:bg-red-500 hover:text-white bg-white/5 border border-white/10 px-5 rounded-2xl backdrop-blur-md"
+                                        className="text-slate-400 hover:bg-red-50 hover:text-red-600 border border-slate-200 hover:border-red-200 px-3 rounded-lg"
                                         onClick={async () => {
                                             if (enrollments.length > 0) {
                                                 addToast('error', 'Não é possível excluir uma turma que possui alunos vinculados.');
@@ -523,62 +571,119 @@ export const ClassDetailsView: FC = () => {
                             </div>
                         </div>
 
-                        {/* Main Title & Stats Layer */}
-                        <div className="flex flex-col lg:flex-row gap-10 items-end justify-between">
-                            <div className="flex gap-8 items-end flex-1">
-                                <div className="mb-2 text-white z-10">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="border-white/30 text-white bg-white/10 uppercase font-black tracking-[0.2em] text-[10px] px-3 py-1">
-                                            {classData.shift === 'morning' ? 'Manhã' : classData.shift === 'afternoon' ? 'Tarde' : classData.shift}
-                                        </Badge>
-                                        <Badge className="border-white/30 text-white bg-white/10 uppercase font-black tracking-[0.2em] text-[10px] px-3 py-1">
-                                            {classData.school_year}
-                                        </Badge>
+                        {/* KPI Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            {/* Card 1: Título da Turma */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-lg bg-brand-50 flex-shrink-0">
+                                        <GraduationCap className="w-5 h-5 text-brand-600" />
                                     </div>
-                                    <h1 className="text-3xl lg:text-5xl font-black tracking-tight mb-1 lg:mb-2 leading-none">{classData.name}</h1>
-                                    <div className="flex items-center gap-2 text-white/70 font-bold text-xs lg:text-base">
-                                        <div className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-green-400 animate-pulse" />
-                                        {enrollments.length} alunos ativos nesta turma
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Turma</p>
+                                        <h3 className="text-xl font-bold text-slate-900 leading-tight tracking-tight truncate">
+                                            {classData.name}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                                            {enrollments.length} {enrollments.length === 1 ? 'aluno ativo' : 'alunos ativos'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Consolidated Date Selector & Stats */}
-                            <div className="flex gap-4 items-center z-10">
-                                {/* Stats Cards Inline */}
-                                <div className="flex gap-3 h-12 lg:h-14 bg-white/10 backdrop-blur-md rounded-xl lg:rounded-2xl p-1 border border-white/20 shadow-lg">
-                                    <div className="flex flex-col justify-center px-3 lg:px-4 border-r border-white/10">
-                                        <span className="text-[10px] scale-90 lg:scale-100 font-black text-white/50 uppercase tracking-widest text-[9px]">Alunos</span>
-                                        <span className="text-base lg:text-lg font-black text-white leading-none">{enrollments.length}</span>
+                            {/* Card 2: Professores */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-lg bg-purple-50 flex-shrink-0">
+                                        <UserCheck className="w-5 h-5 text-purple-600" />
                                     </div>
-                                    <div className="flex flex-col justify-center px-3 lg:px-4">
-                                        <span className="text-[10px] scale-90 lg:scale-100 font-black text-white/50 uppercase tracking-widest text-[9px]">Professores</span>
-                                        <span className="text-base lg:text-lg font-black text-white leading-none">{teachers.length}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Professores</p>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {teachers.length}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                                            {teachers.filter(t => t.is_primary).length > 0 ? '1 regente' : 'Sem regente'}
+                                        </p>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Single Date Picker */}
-                                <div className="relative group flex flex-col items-end">
-                                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-1.5 border border-white/30 flex items-center gap-3 hover:bg-white/20 transition-all shadow-xl">
-                                        <div className="flex flex-col px-4 py-1">
-                                            <span className="text-[9px] font-black text-white/50 uppercase tracking-widest leading-none mb-1">Data de Trabalho</span>
-                                            <CustomDatePicker
-                                                value={selectedDate}
-                                                onChange={setSelectedDate}
-                                                minDate={minDate}
-                                                maxDate={maxDate}
-                                                highlightedDates={lessonDates}
-                                                align="right"
-                                                showIcon={false}
-                                                className="text-white !font-black !p-0 !bg-transparent !border-none !shadow-none cursor-pointer"
-                                            />
-                                        </div>
+                            {/* Card 3: Turno e Ano */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-lg bg-amber-50 flex-shrink-0">
+                                        <Sunrise className="w-5 h-5 text-amber-600" />
                                     </div>
-                                </div >
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+                                            {classData.shift === 'morning' ? 'Manhã' : classData.shift === 'afternoon' ? 'Tarde' : classData.shift === 'full' ? 'Integral' : 'Noite'}
+                                        </p>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {classData.school_year}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                                            Ano letivo
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Alunos e Vagas */}
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2.5 rounded-lg bg-green-50 flex-shrink-0">
+                                        <UsersRound className="w-5 h-5 text-green-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">Alunos</p>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                                            {enrollments.length}/{classData.capacity || 35}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                                            {classData.capacity && enrollments.length >= classData.capacity
+                                                ? 'Turma cheia'
+                                                : `${(classData.capacity || 35) - enrollments.length} ${(classData.capacity || 35) - enrollments.length === 1 ? 'vaga disponível' : 'vagas disponíveis'}`
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        {/* Date Selector */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <Calendar className="w-5 h-5 text-slate-400" />
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                                        Data de Trabalho
+                                    </div>
+                                    <CustomDatePicker
+                                        value={selectedDate}
+                                        onChange={setSelectedDate}
+                                        minDate={minDate}
+                                        maxDate={maxDate}
+                                        highlightedDates={lessonDates}
+                                        showIcon={false}
+                                        className="text-slate-900 font-semibold !p-0 !bg-transparent !border-none !shadow-none"
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-brand-600 hover:bg-brand-50 border border-brand-200"
+                                onClick={() => {
+                                    const today = new Date();
+                                    setSelectedDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
+                                }}
+                            >
+                                Hoje
+                            </Button>
+                        </div>
                     </div>
-                </div >
+                </div>
 
                 {/* Navigation Tabs (Desktop) */}
                 < div className="flex justify-center" >
@@ -616,43 +721,215 @@ export const ClassDetailsView: FC = () => {
                 {/* Content Area (Desktop) */}
                 < div className="min-h-[400px] animate-fade-in-up" >
                     {activeTab === 'students' && (
-                        <div className="space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-gray-800">Lista de Alunos</h3>
-                                {(user?.role === 'ADMIN' || user?.role === 'SECRETARY') && (
-                                    <Button className="bg-brand-600 hover:bg-brand-700 text-white" onClick={() => setIsAddStudentOpen(true)}>
-                                        <UserPlus className="w-4 h-4 mr-2" />
-                                        Adicionar Aluno
-                                    </Button>
-                                )}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {enrollments.length === 0 ? (
-                                    <div className="col-span-full bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
-                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                                            <Users className="w-8 h-8 text-gray-300" />
-                                        </div>
-                                        <h3 className="text-gray-900 font-medium mb-1">Nenhum aluno enturmado</h3>
-                                        <p className="text-gray-500 text-sm">Adicione alunos para começar a gerenciar.</p>
+                        <div className="space-y-4">
+                            {/* Student Table Card */}
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                {/* Toolbar */}
+                                <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex flex-col xl:flex-row gap-4 justify-between items-end xl:items-center">
+                                    {/* Search */}
+                                    <div className="flex-1 w-full xl:max-w-md relative">
+                                        <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                                        <input
+                                            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all font-medium"
+                                            placeholder="Buscar por aluno, matrícula..."
+                                            value={studentSearchTerm}
+                                            onChange={(e) => setStudentSearchTerm(e.target.value)}
+                                        />
                                     </div>
-                                ) : (
-                                    enrollments.map((item) => (
-                                        <div key={item.id} className="bg-white p-3 lg:p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-brand-200 transition-all">
-                                            <div className="flex items-center gap-3 lg:gap-4">
-                                                <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 font-bold text-xs lg:text-sm uppercase ring-2 ring-white shadow-sm">
-                                                    {item.student?.name?.substring(0, 2) || 'AL'}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-900 group-hover:text-brand-600 transition-colors">{item.student?.name}</p>
-                                                    <p className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full inline-block mt-1">Mat: {item.enrollment_id.substring(0, 8)}</p>
-                                                </div>
-                                            </div>
-                                            <button className="text-gray-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100" title="Remover aluno">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
+
+                                    {/* Filters and Actions */}
+                                    <div className="flex flex-wrap gap-3 w-full xl:w-auto">
+                                        {/* Status Filter */}
+                                        <div className="flex bg-gray-200 p-1 rounded-lg overflow-x-auto max-w-full">
+                                            {['all', 'active', 'inactive'].map((status) => (
+                                                <button
+                                                    key={status}
+                                                    onClick={() => setStudentStatusFilter(status as any)}
+                                                    className={`
+                                                        px-3 py-1.5 rounded-md text-xs font-semibold transition-all capitalize whitespace-nowrap
+                                                        ${studentStatusFilter === status
+                                                            ? 'bg-white text-gray-900 shadow-sm'
+                                                            : 'text-gray-500 hover:text-gray-700'
+                                                        }
+                                                    `}
+                                                >
+                                                    {status === 'all' ? 'Todos' : status === 'active' ? 'Ativos' : 'Inativos'}
+                                                </button>
+                                            ))}
                                         </div>
-                                    ))
+
+                                        {/* Add Student Button */}
+                                        {(user?.role === 'ADMIN' || user?.role === 'SECRETARY') && (
+                                            <Button
+                                                className="bg-brand-600 hover:bg-brand-700 shadow-lg shadow-brand-600/20"
+                                                onClick={() => setIsAddStudentOpen(true)}
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Adicionar Aluno
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50/80 border-b border-gray-100">
+                                            <tr>
+                                                <th className="px-6 py-4 w-4">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                                        checked={enrollments.length > 0 && selectedStudentIds.length === enrollments.length}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedStudentIds(enrollments.map(e => e.id));
+                                                            } else {
+                                                                setSelectedStudentIds([]);
+                                                            }
+                                                        }}
+                                                    />
+                                                </th>
+                                                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Aluno</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Matrícula</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Frequência</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                                <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Última Presença</th>
+                                                <th className="px-6 py-4"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50">
+                                            {enrollments.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={7} className="px-6 py-24 text-center">
+                                                        <div className="flex flex-col items-center justify-center text-gray-400">
+                                                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                                                                <Users className="w-8 h-8 text-gray-300" />
+                                                            </div>
+                                                            <p className="text-lg font-medium text-gray-900">Nenhum aluno enturmado</p>
+                                                            <p className="text-sm">Adicione alunos para começar a gerenciar.</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                enrollments
+                                                    .filter(item => {
+                                                        // Filter by search term
+                                                        if (studentSearchTerm) {
+                                                            const searchLower = studentSearchTerm.toLowerCase();
+                                                            const matchesName = item.student?.name?.toLowerCase().includes(searchLower);
+                                                            const matchesId = item.enrollment_id.toLowerCase().includes(searchLower);
+                                                            if (!matchesName && !matchesId) return false;
+                                                        }
+                                                        // Filter by status (assuming all are active for now)
+                                                        if (studentStatusFilter !== 'all') {
+                                                            // TODO: Add actual status field
+                                                            if (studentStatusFilter === 'inactive') return false;
+                                                        }
+                                                        return true;
+                                                    })
+                                                    .map((item) => {
+                                                        return (
+                                                            <tr
+                                                                key={item.id}
+                                                                onClick={() => {
+                                                                    setSelectedStudent(item);
+                                                                    setIsStudentModalOpen(true);
+                                                                }}
+                                                                className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                                                            >
+                                                                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                                                        checked={selectedStudentIds.includes(item.id)}
+                                                                        onChange={() => {
+                                                                            setSelectedStudentIds(prev =>
+                                                                                prev.includes(item.id)
+                                                                                    ? prev.filter(id => id !== item.id)
+                                                                                    : [...prev, item.id]
+                                                                            );
+                                                                        }}
+                                                                    />
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm uppercase overflow-hidden border border-brand-200 flex-shrink-0">
+                                                                            {item.student?.photo_url ? (
+                                                                                <img src={item.student.photo_url} className="w-full h-full object-cover" alt={item.student?.name} />
+                                                                            ) : (
+                                                                                item.student?.name?.substring(0, 2) || 'AL'
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-sm font-medium text-gray-900">{item.student?.name}</p>
+                                                                            <p className="text-xs text-gray-400">
+                                                                                {(() => {
+                                                                                    const financialResp = (item.student as any)?.financial_responsible;
+                                                                                    const parentName = financialResp?.name;
+                                                                                    return parentName ? `Resp: ${parentName}` : 'Sem responsável';
+                                                                                })()}
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm font-mono text-brand-600 font-bold">
+                                                                    #{item.enrollment_id.substring(0, 6)}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    {(() => {
+                                                                        const studentAttendance = attendanceData.get(item.student_id);
+                                                                        const rate = studentAttendance?.attendance_rate || 0;
+                                                                        return (
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="flex-1 bg-gray-200 rounded-full h-2 w-20">
+                                                                                    <div
+                                                                                        className={`h-2 rounded-full ${rate >= 90 ? 'bg-green-500' :
+                                                                                            rate >= 75 ? 'bg-yellow-500' :
+                                                                                                'bg-red-500'
+                                                                                            }`}
+                                                                                        style={{ width: `${rate}%` }}
+                                                                                    />
+                                                                                </div>
+                                                                                <span className="text-sm font-bold text-gray-900 w-10 text-right">{rate}%</span>
+                                                                            </div>
+                                                                        );
+                                                                    })()}
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                                        <CheckCircle className="w-3.5 h-3.5" /> Ativo
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-sm text-gray-500">
+                                                                    {(() => {
+                                                                        const studentAttendance = attendanceData.get(item.student_id);
+                                                                        const lastDate = studentAttendance?.last_attendance_date;
+                                                                        return lastDate
+                                                                            ? new Date(lastDate).toLocaleDateString('pt-BR')
+                                                                            : '—';
+                                                                    })()}
+                                                                </td>
+                                                                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                                                    <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                                                                        <MoreVertical className="w-4 h-4" />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Footer Info */}
+                                {enrollments.length > 0 && (
+                                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                                        <p className="text-sm text-gray-500 font-medium">
+                                            Mostrando <span className="font-bold text-gray-900">{enrollments.length}</span> {enrollments.length === 1 ? 'aluno' : 'alunos'}
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -848,47 +1125,104 @@ export const ClassDetailsView: FC = () => {
                 MOBILE VIEW
                ================================================================================= */}
             <div className="md:hidden min-h-screen bg-slate-50">
-                {/* --- MOBILE DATE SELECTOR --- */}
-                <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600">
-                            <Calendar className="w-4 h-4" />
+                {/* --- MOBILE HEADER (Simplified) --- */}
+                <div className="bg-white px-4 py-3 border-b border-slate-100">
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <h2 className="text-sm font-bold text-gray-900">{classData?.name || 'Carregando...'}</h2>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                <CustomDatePicker
+                                    value={selectedDate}
+                                    onChange={setSelectedDate}
+                                    className="!bg-transparent !p-0 !shadow-none !border-none text-xs text-gray-500"
+                                />
+                            </div>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data de Trabalho</span>
-                            <CustomDatePicker
-                                value={selectedDate}
-                                onChange={setSelectedDate}
-                                className="!bg-transparent !p-0 !shadow-none !border-none"
-                            />
-                        </div>
+                        <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                            <MoreVertical className="w-5 h-5 text-gray-400" />
+                        </button>
                     </div>
                 </div>
+                {/* --- MAIN CONTENT (with bottom padding for nav) --- */}
+                <div className="animate-fade-in-up pt-4 pb-32">
+                    {/* Students Tab - Mobile */}
+                    {mobileActiveTab === 'students' && (
+                        <div className="p-4 pt-0 space-y-3">
+                            {enrollments
+                                .filter(item => {
+                                    // Apply same filters as desktop
+                                    if (studentSearchTerm) {
+                                        const searchLower = studentSearchTerm.toLowerCase();
+                                        const matchesName = item.student?.name?.toLowerCase().includes(searchLower);
+                                        const matchesId = item.enrollment_id.toLowerCase().includes(searchLower);
+                                        if (!matchesName && !matchesId) return false;
+                                    }
+                                    if (studentStatusFilter !== 'all') {
+                                        if (studentStatusFilter === 'inactive') return false;
+                                    }
+                                    return true;
+                                })
+                                .map((item) => {
+                                    const studentAttendance = attendanceData.get(item.student_id);
+                                    const rate = studentAttendance?.attendance_rate || 0;
+                                    const lastDate = studentAttendance?.last_attendance_date;
 
-                {/* --- MOBILE TABS (Sticky below layout header) --- */}
-                <div className="bg-white border-b border-slate-200 sticky top-[calc(4rem+env(safe-area-inset-top))] z-30 shadow-sm mt-1">
-                    <div className="flex px-4 gap-6 overflow-x-auto no-scrollbar border-b border-gray-100">
-                        {[
-                            { id: 'attendance', label: 'Chamada' },
-                            { id: 'diary', label: 'Agenda' },
-                            { id: 'grades', label: 'Notas' },
-                            { id: 'planning', label: 'Atividades' }
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setMobileActiveTab(tab.id as any)}
-                                className={`pb-3 text-sm font-bold border-b-2 transition-all whitespace-nowrap px-1 
-                                    ${mobileActiveTab === tab.id ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
-                                `}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                                    return (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => {
+                                                setSelectedStudent(item);
+                                                setIsStudentModalOpen(true);
+                                            }}
+                                            className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 active:scale-[0.98] transition-transform"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                {/* Avatar */}
+                                                <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm uppercase overflow-hidden border-2 border-brand-200 flex-shrink-0">
+                                                    {item.student?.photo_url ? (
+                                                        <img src={item.student.photo_url} className="w-full h-full object-cover" alt={item.student?.name} />
+                                                    ) : (
+                                                        item.student?.name?.substring(0, 2) || 'AL'
+                                                    )}
+                                                </div>
 
-                {/* --- 3. MAIN CONTENT --- */}
-                <div className="animate-fade-in-up pt-6 pb-32">
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-gray-900 truncate">{item.student?.name}</p>
+                                                    <p className="text-xs text-gray-500">Mat: #{item.enrollment_id.substring(0, 6)}</p>
+                                                    {lastDate && (
+                                                        <p className="text-[10px] text-gray-400 mt-0.5">
+                                                            Última presença: {new Date(lastDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Frequência Badge */}
+                                                <div className="text-right flex-shrink-0">
+                                                    <span className={`inline-block px-3 py-1.5 rounded-full font-bold text-sm ${rate >= 90 ? 'bg-green-100 text-green-700' :
+                                                        rate >= 75 ? 'bg-yellow-100 text-yellow-700' :
+                                                            'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {rate}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                            {enrollments.length === 0 && (
+                                <div className="text-center py-16">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <Users className="w-8 h-8 text-gray-400" />
+                                    </div>
+                                    <p className="text-gray-500 font-medium">Nenhum aluno matriculado</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {mobileActiveTab === 'diary' && id && (
                         <div className="p-4 pt-0">
                             <ClassDailyAgenda classId={id} date={selectedDate} />
@@ -938,6 +1272,31 @@ export const ClassDetailsView: FC = () => {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* --- BOTTOM NAVIGATION --- */}
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 md:hidden safe-area-pb">
+                    <div className="flex items-center justify-around px-2 py-2">
+                        {[
+                            { id: 'students', label: 'Alunos', icon: Users },
+                            { id: 'attendance', label: 'Chamada', icon: ClipboardCheck },
+                            { id: 'diary', label: 'Agenda', icon: Calendar },
+                            { id: 'grades', label: 'Notas', icon: FileText },
+                            { id: 'planning', label: 'Plano', icon: BookOpen }
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setMobileActiveTab(tab.id as any)}
+                                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px] ${mobileActiveTab === tab.id
+                                    ? 'bg-brand-50 text-brand-600'
+                                    : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                            >
+                                <tab.icon className="w-5 h-5" />
+                                <span className="text-[10px] font-bold leading-tight">{tab.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -1083,6 +1442,62 @@ export const ClassDetailsView: FC = () => {
                         <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleUpdateClass}>Salvar Alterações</Button>
                     </div>
+                </div>
+            </Modal>
+
+            {/* Student Details Modal */}
+            <Modal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} title="Detalhes do Aluno">
+                <div className="p-6">
+                    {selectedStudent && (
+                        <>
+                            {/* Header */}
+                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+                                <div className="w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xl uppercase overflow-hidden border-2 border-brand-200">
+                                    {selectedStudent.student?.photo_url ? (
+                                        <img src={selectedStudent.student.photo_url} className="w-full h-full object-cover" alt={selectedStudent.student?.name} />
+                                    ) : (
+                                        selectedStudent.student?.name?.substring(0, 2) || 'AL'
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h2 className="text-2xl font-bold text-gray-900">{selectedStudent.student?.name}</h2>
+                                    <p className="text-sm text-gray-500 font-mono">Matrícula #{selectedStudent.enrollment_id.substring(0, 8)}</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsStudentModalOpen(false)}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {/* Content Placeholder */}
+                            <div className="space-y-4">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                                    <p className="text-blue-900 font-medium mb-2">🚧 Modal em Construção</p>
+                                    <p className="text-sm text-blue-700">
+                                        Aqui serão exibidas as abas com informações detalhadas do aluno:
+                                        <br />
+                                        <span className="font-semibold">Perfil • Chamadas • Notas • Agenda</span>
+                                    </p>
+                                </div>
+
+                                {/* Quick Info */}
+                                <div className="grid grid-cols-2 gap-4 mt-6">
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Status</p>
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                            <CheckCircle className="w-3.5 h-3.5" /> Ativo
+                                        </span>
+                                    </div>
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Frequência</p>
+                                        <p className="text-2xl font-bold text-gray-900">95%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </Modal>
         </>
