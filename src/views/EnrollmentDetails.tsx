@@ -118,6 +118,37 @@ export const EnrollmentDetailsView: FC = () => {
     // Academic State
     const [enrollmentGrades, setEnrollmentGrades] = useState<any[]>([]);
 
+    // Email Check State
+    const [isEmailCheckLoading, setIsEmailCheckLoading] = useState(false);
+    const [emailCheckResult, setEmailCheckResult] = useState<{ exists: boolean, name?: string } | null>(null);
+
+    const handleEmailCheck = async (email: string) => {
+        if (!email || !email.includes('@')) {
+            setEmailCheckResult(null);
+            return;
+        }
+
+        setIsEmailCheckLoading(true);
+
+        try {
+            const { data } = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (data) {
+                setEmailCheckResult({ exists: true, name: data.name });
+            } else {
+                setEmailCheckResult(null);
+            }
+        } catch (err) {
+            console.error('Erro checking email:', err);
+        } finally {
+            setIsEmailCheckLoading(false);
+        }
+    };
+
     // --- Photo Edit Logic ---
     const [isPhotoCropperOpen, setIsPhotoCropperOpen] = useState(false);
     const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -247,6 +278,10 @@ export const EnrollmentDetailsView: FC = () => {
                 parent_email: data.parent_email,
                 invite_token: data.invite_token
             });
+
+            if (data.parent_email) {
+                handleEmailCheck(data.parent_email);
+            }
             const rawDetails = data.details || {};
             // Ensure array fields are actually arrays (handle stringified JSON or legacy data)
             ['allergies', 'medications_allowed', 'medications_restricted', 'authorized_pickups'].forEach(key => {
@@ -1270,12 +1305,30 @@ export const EnrollmentDetailsView: FC = () => {
                                             ))}
                                             error={details.parent_cpf?.length === 14 && !isValidCPF(details.parent_cpf) ? 'CPF inválido' : undefined}
                                         />
-                                        <Input
-                                            label="Email Principal"
-                                            icon={<Mail className="h-4 w-4" />}
-                                            value={formData.parent_email}
-                                            onChange={e => setFormData({ ...formData, parent_email: e.target.value })}
-                                        />
+                                        <div>
+                                            <Input
+                                                label="Email Principal"
+                                                icon={<Mail className="h-4 w-4" />}
+                                                value={formData.parent_email}
+                                                onChange={e => {
+                                                    setFormData({ ...formData, parent_email: e.target.value });
+                                                    if (emailCheckResult) setEmailCheckResult(null);
+                                                }}
+                                                onBlur={e => handleEmailCheck(e.target.value)}
+                                                rightIcon={isEmailCheckLoading ? <Loader2 className="animate-spin h-4 w-4 text-brand-600" /> : (emailCheckResult?.exists ? <AlertCircle className="h-4 w-4 text-amber-500" /> : null)}
+                                            />
+                                            {emailCheckResult?.exists && (
+                                                <div className="mt-1 p-2 bg-amber-50 border border-amber-200 rounded-md animate-fade-in">
+                                                    <p className="text-xs text-amber-700 flex items-start gap-1">
+                                                        <Info className="h-3 w-3 mt-0.5 shrink-0" />
+                                                        <span>
+                                                            Email vinculado a: <strong>{emailCheckResult.name}</strong>. <br />
+                                                            O aluno será associado a este usuário.
+                                                        </span>
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                         <PhoneInput
                                             label="Telefone / WhatsApp"
                                             value={details.parent_phone || ''}
