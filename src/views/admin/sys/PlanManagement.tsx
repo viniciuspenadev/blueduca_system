@@ -30,6 +30,7 @@ interface ProductPlan {
         library: boolean;
         inventory: boolean;
         dunning: boolean;
+        chat: boolean;
     };
     config_limits: {
         max_students: number;
@@ -217,7 +218,8 @@ export const PlanManagement: FC = () => {
                                             menu: 'Cardápio',
                                             library: 'Biblioteca',
                                             inventory: 'Estoque',
-                                            dunning: 'Régua de Cobrança'
+                                            dunning: 'Régua de Cobrança',
+                                            chat: 'Atendimento (Chat)'
                                         };
                                         return (
                                             <button

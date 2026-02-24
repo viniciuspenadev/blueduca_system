@@ -179,7 +179,8 @@ export const SchoolSettings: React.FC<Props> = ({ school }) => {
                                 { id: 'crm', label: 'CRM & Captação' },
                                 { id: 'menu', label: 'Cardápio Escolar' },
                                 { id: 'library', label: 'Biblioteca' },
-                                { id: 'inventory', label: 'Estoque/Almoxarifado' }
+                                { id: 'inventory', label: 'Estoque/Almoxarifado' },
+                                { id: 'chat', label: 'Atendimento (Chat)' }
                             ].map((module) => {
                                 const dbKey = module.id;
 

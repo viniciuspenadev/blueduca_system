@@ -1,6 +1,7 @@
 import { type FC, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlan } from '../../hooks/usePlan';
 import {
     Star,
     Loader2,
@@ -36,6 +37,7 @@ import { PlanUsageChart } from './PlanUsageChart';
 
 export const SchoolConfigHub: FC = () => {
     const { currentSchool } = useAuth();
+    const { hasModule } = usePlan();
     const [searchParams, setSearchParams] = useSearchParams();
     const [loading, setLoading] = useState(true);
 
@@ -62,17 +64,17 @@ export const SchoolConfigHub: FC = () => {
     const configTabs = [
         { id: 'school', label: 'Escola', icon: School },
         { id: 'plan', label: 'Plano', icon: Star },
-        { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
-        { id: 'chat_permissions', label: 'Atendimento', icon: MessageSquare },
-        { id: 'finance', label: 'Financeiro', icon: DollarSign },
+        hasModule('whatsapp') ? { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare } : null,
+        hasModule('chat') ? { id: 'chat_permissions', label: 'Atendimento', icon: MessageSquare } : null,
+        hasModule('finance') ? { id: 'finance', label: 'Financeiro', icon: DollarSign } : null,
         { id: 'users', label: 'Usuários', icon: Users },
-        { id: 'acad_general', label: 'Agendas', icon: Settings },
-        { id: 'acad_years', label: 'Anos Letivos', icon: Calendar },
-        { id: 'acad_periods', label: 'Períodos de Avaliação', icon: CalendarDays },
-        { id: 'acad_subjects', label: 'Matérias', icon: BookOpen },
-        { id: 'acad_timelines', label: 'Rotinas', icon: Clock },
+        hasModule('academic') ? { id: 'acad_general', label: 'Agendas', icon: Settings } : null,
+        hasModule('academic') ? { id: 'acad_years', label: 'Anos Letivos', icon: Calendar } : null,
+        hasModule('academic') ? { id: 'acad_periods', label: 'Períodos de Avaliação', icon: CalendarDays } : null,
+        hasModule('academic') ? { id: 'acad_subjects', label: 'Matérias', icon: BookOpen } : null,
+        hasModule('academic') ? { id: 'acad_timelines', label: 'Rotinas', icon: Clock } : null,
         { id: 'acad_docs', label: 'Documentos', icon: FileText },
-    ];
+    ].filter(Boolean) as any[];
 
     if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div>;
 

@@ -29,6 +29,7 @@ export interface School {
         crm?: boolean;
         library?: boolean;
         menu?: boolean;
+        chat?: boolean;
     };
     config_limits: {
         max_students?: number;

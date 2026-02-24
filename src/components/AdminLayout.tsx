@@ -100,8 +100,13 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
         hasModule('communications') && {
             section: 'Comunicação',
             items: [
-                { icon: Megaphone, label: 'Comunicados', path: '/admin/comunicados', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] },
-                { icon: MessageCircle, label: 'Mensagens', path: '/admin/chat', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] },
+                { icon: Megaphone, label: 'Comunicados', path: '/admin/comunicados', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] }
+            ]
+        },
+        hasModule('chat') && {
+            section: 'Atendimento',
+            items: [
+                { icon: MessageCircle, label: 'Mensagens', path: '/admin/chat', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] }
             ]
         },
         {
