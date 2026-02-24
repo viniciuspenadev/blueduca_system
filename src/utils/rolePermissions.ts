@@ -26,6 +26,7 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
         '/alunos/:id',
         '/admin/comunicados',
         '/admin/comunicados/novo',
+        '/admin/chat',
     ],
 
     // TEACHER - Restricted to teaching activities
@@ -38,6 +39,7 @@ export const ROLE_ROUTES: Record<UserRole, string[]> = {
         '/admin/comunicados',
         '/admin/comunicados/novo',
         '/admin/comunicados/:id',
+        '/admin/chat',
         // NOT allowed: /matriculas, /financeiro, /usuarios, /config, /turmas/nova
     ],
 

@@ -25,12 +25,14 @@ import {
     School,
     Star,
     MessageSquare,
+    MessageCircle,
     BookOpen,
     Clock
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { usePlan } from '../hooks/usePlan';
 import { useAuth } from '../contexts/AuthContext';
+import { useChatSync } from '../hooks/useChatSync';
 
 
 interface AdminLayoutProps {
@@ -44,6 +46,7 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
     const location = useLocation();
     const { hasModule } = usePlan();
     const { isImpersonating, stopImpersonation, currentSchool } = useAuth();
+    const { hasUnread } = useChatSync();
     const [schoolLogo, setSchoolLogo] = useState<string | null>(null);
 
     // Fetch School Branding
@@ -97,7 +100,8 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
         hasModule('communications') && {
             section: 'Comunicação',
             items: [
-                { icon: FileText, label: 'Mensagens', path: '/admin/comunicados', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] },
+                { icon: Megaphone, label: 'Comunicados', path: '/admin/comunicados', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] },
+                { icon: MessageCircle, label: 'Mensagens', path: '/admin/chat', roles: ['ADMIN', 'SECRETARY', 'COORDINATOR', 'TEACHER'] },
             ]
         },
         {
@@ -135,6 +139,7 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
 
                         { label: 'INTEGRAÇÕES', isHeader: true },
                         { label: 'WhatsApp', path: '/config/hub?tab=whatsapp', icon: MessageSquare },
+                        { label: 'Canais de Atendimento', path: '/config/hub?tab=chat_permissions', icon: MessageCircle },
                         { label: 'Financeiro', path: '/config/hub?tab=finance', icon: DollarSign, module: 'finance' },
 
                         { label: 'ACADÊMICO', isHeader: true },
@@ -301,6 +306,8 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
                                         );
                                     }
 
+                                    const isChat = item.path === '/admin/chat';
+
                                     return (
                                         <NavLink
                                             key={item.path}
@@ -313,7 +320,12 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
                                                 }
                                         `}
                                         >
-                                            <item.icon className={`w-5 h-5 ${active ? 'text-brand-600' : 'text-slate-400'}`} />
+                                            <div className="relative">
+                                                <item.icon className={`w-5 h-5 ${active ? 'text-brand-600' : 'text-slate-400'}`} />
+                                                {isChat && hasUnread && (
+                                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" />
+                                                )}
+                                            </div>
                                             {item.label}
                                         </NavLink>
                                     );
@@ -349,8 +361,11 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
                     <div className="flex items-center gap-2 h-full">
                         <img src={schoolLogo || logo} alt="Logo" className="h-10 w-auto object-contain" />
                     </div>
-                    <button onClick={toggleMobileMenu} className="p-2 text-slate-600">
+                    <button onClick={toggleMobileMenu} className="p-2 text-slate-600 relative">
                         {isMobileMenuOpen ? <X /> : <Menu />}
+                        {!isMobileMenuOpen && hasUnread && (
+                            <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" />
+                        )}
                     </button>
                 </div>
 
@@ -385,7 +400,12 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
                                                 ${isActive ? 'bg-brand-50 text-brand-700 shadow-sm border-brand-100 ring-1 ring-brand-100/50' : 'text-slate-500 hover:bg-slate-50'}
                                             `}
                                             >
-                                                <item.icon className={`w-5 h-5 ${isActiveLink(item.path) ? 'text-brand-600' : 'text-slate-400'}`} />
+                                                <div className="relative">
+                                                    <item.icon className={`w-5 h-5 ${isActiveLink(item.path) ? 'text-brand-600' : 'text-slate-400'}`} />
+                                                    {item.path === '/admin/chat' && hasUnread && (
+                                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" />
+                                                    )}
+                                                </div>
                                                 {item.label}
                                             </NavLink>
                                         ))}
@@ -440,9 +460,18 @@ export const AdminLayout: FC<AdminLayoutProps> = ({ children, user, onLogout }) 
                     <header className="hidden md:flex justify-end items-center h-16 bg-white border-b border-gray-200 px-8 fixed top-0 left-64 lg:left-56 xl:left-64 right-0 z-50 shadow-sm transition-all duration-300">
                         <div className="flex items-center gap-4">
                             {hasModule('communications') && (
+                                <Link to="/admin/chat" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors relative group">
+                                    <MessageCircle size={20} className={hasUnread ? 'text-brand-600' : ''} />
+                                    {hasUnread && (
+                                        <span className="absolute top-2 right-2 w-3 h-3 bg-red-500 border-2 border-white rounded-full animate-pulse shadow-sm" />
+                                    )}
+                                    <span className="font-medium">Mensagens</span>
+                                </Link>
+                            )}
+                            {hasModule('communications') && (
                                 <Link to="/admin/comunicados" className="flex items-center gap-3 p-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors">
                                     <Megaphone size={20} />
-                                    <span className="font-medium">Mensagens</span>
+                                    <span className="font-medium">Comunicados</span>
                                 </Link>
                             )}
                             <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">

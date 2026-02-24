@@ -5,10 +5,17 @@ import { Loader2, UtensilsCrossed } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay, getDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface Meal {
+    id: string; // for React keys
+    title: string;
+    description: string;
+    tags: string[];
+}
+
 interface MenuTemplate {
     id: string;
     name: string;
-    content: Record<string, { title: string, description: string }>;
+    content: Record<string, Meal[]>;
     is_active: boolean;
 }
 
@@ -39,6 +46,28 @@ export const ParentLunchMenu: React.FC = () => {
                 .single();
 
             if (error && error.code !== 'PGRST116') throw error;
+
+            // Migrate on the fly for viewing
+            if (data && data.content) {
+                const newContent: Record<string, Meal[]> = {};
+                Object.keys(data.content).forEach(day => {
+                    const dayData = data.content[day];
+                    if (Array.isArray(dayData)) {
+                        newContent[day] = dayData;
+                    } else if (typeof dayData === 'object' && dayData !== null) {
+                        newContent[day] = [{
+                            id: Math.random().toString(36).substr(2, 9),
+                            title: dayData.title || 'Almoço',
+                            description: dayData.description || '',
+                            tags: []
+                        }];
+                    } else {
+                        newContent[day] = [];
+                    }
+                });
+                data.content = newContent;
+            }
+
             setActiveTemplate(data);
         } catch (error) {
             console.error('Error fetching template:', error);
@@ -47,14 +76,15 @@ export const ParentLunchMenu: React.FC = () => {
         }
     };
 
-    const getDayContent = (date: Date) => {
-        if (!activeTemplate?.content) return null;
+    const getDayMeals = (date: Date): Meal[] => {
+        if (!activeTemplate?.content) return [];
         const dayIndex = getDay(date);
         const key = WEEK_KEYS[dayIndex];
-        return activeTemplate.content[key];
+        return activeTemplate.content[key] || [];
     };
 
-    const currentContent = getDayContent(selectedDate);
+    const currentMeals = getDayMeals(selectedDate);
+    const hasAnyMenuForSelectedDay = currentMeals.length > 0;
 
     return (
         <div className="space-y-8 pb-24">
@@ -80,15 +110,15 @@ export const ParentLunchMenu: React.FC = () => {
                         {Array.from({ length: 7 }).map((_, idx) => {
                             const day = addDays(weekStart, idx);
                             const isSelected = isSameDay(day, selectedDate);
-                            const dayContent = getDayContent(day);
-                            const hasMenu = dayContent && dayContent.description;
+                            const dayMeals = getDayMeals(day);
+                            const hasMenu = dayMeals.length > 0;
 
                             return (
                                 <button
                                     key={idx}
                                     onClick={() => setSelectedDate(day)}
                                     className={`
-                                        flex flex-col items-center justify-center min-w-[3rem] h-12 rounded-lg shrink-0 transition-all
+                                        flex flex-col items-center justify-center min-w-[3rem] h-14 rounded-lg shrink-0 transition-all
                                         ${isSelected
                                             ? 'bg-white text-brand-600 font-bold shadow-md'
                                             : 'text-white/60 hover:bg-white/10'
@@ -100,7 +130,7 @@ export const ParentLunchMenu: React.FC = () => {
                                     </span>
                                     <span className="text-base leading-none mt-0.5">{format(day, 'dd')}</span>
                                     {hasMenu && (
-                                        <div className={`w-1 h-1 rounded-full mt-0.5 ${isSelected ? 'bg-brand-400' : 'bg-green-400'}`} />
+                                        <div className={`w-1 h-1 rounded-full mt-1 ${isSelected ? 'bg-brand-400' : 'bg-green-400'}`} />
                                     )}
                                 </button>
                             )
@@ -115,7 +145,7 @@ export const ParentLunchMenu: React.FC = () => {
                 </div>
             </div>
 
-            <div className="px-1 max-w-2xl mx-auto space-y-6">
+            <div className="px-4 max-w-2xl mx-auto space-y-6">
                 <h2 className="text-gray-800 font-bold text-lg px-2">
                     {format(selectedDate, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                 </h2>
@@ -131,27 +161,41 @@ export const ParentLunchMenu: React.FC = () => {
                         <h3 className="text-lg font-bold text-gray-800 mb-1">Sem Cardápio Ativo</h3>
                         <p className="text-gray-500 text-sm">Nenhum cardápio foi publicado pela escola ainda.</p>
                     </div>
-                ) : !currentContent || !currentContent.description ? (
+                ) : !hasAnyMenuForSelectedDay ? (
                     <div className="bg-white p-12 rounded-3xl shadow-sm border border-gray-100 text-center">
                         <UtensilsCrossed size={48} className="text-gray-200 mx-auto mb-4" />
                         <h3 className="text-lg font-bold text-gray-800 mb-1">Nada cadastrado</h3>
-                        <p className="text-gray-500 text-sm">Não há informações para este dia ({format(selectedDate, 'EEEE', { locale: ptBR })}).</p>
+                        <p className="text-gray-500 text-sm">Não há informações de refeições para este dia ({format(selectedDate, 'EEEE', { locale: ptBR })}).</p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center">
-                                    <UtensilsCrossed size={24} />
-                                </div>
-                                <h3 className="font-bold text-gray-900 text-xl">{currentContent.title || 'Refeição do Dia'}</h3>
-                            </div>
+                    <div className="space-y-4">
+                        {currentMeals.map((meal) => (
+                            <div key={meal.id} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-50 rounded-full -mr-16 -mt-16 group-hover:scale-110 transition-transform" />
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-4 mb-4">
+                                        <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center shrink-0">
+                                            <UtensilsCrossed size={24} />
+                                        </div>
+                                        <h3 className="font-bold text-gray-900 text-lg">{meal.title || 'Refeição do Dia'}</h3>
+                                    </div>
 
-                            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-lg font-medium p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                {currentContent.description}
+                                    <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base font-medium p-4 bg-gray-50 rounded-2xl border border-gray-100 mb-4">
+                                        {meal.description || 'Nenhum detalhe informado.'}
+                                    </div>
+
+                                    {meal.tags && meal.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {meal.tags.map(tag => (
+                                                <div key={tag} className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 border border-orange-200 rounded-full text-xs font-semibold">
+                                                    <span>{tag}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </div>
                 )}
             </div>

@@ -1,7 +1,7 @@
 import { type FC, useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../services/supabase';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Input } from '../components/ui';
 import {
     User, MapPin, Phone, FileText, Heart, Shield,
     ArrowLeft, Mail, GraduationCap, RefreshCw, CheckCircle,
@@ -487,38 +487,14 @@ export const StudentProfileView: FC = () => {
                                     <User className="w-5 h-5 mr-2 text-brand-600" /> Identificação
                                 </h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Nome Completo</label>
-                                        <p className="text-gray-900 font-medium">{student.name}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Data de Nascimento</label>
-                                        <p className="text-gray-900">{new Date(student.birth_date).toLocaleDateString('pt-BR')}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">CPF</label>
-                                        <p className="text-gray-900 font-mono">{maskSensitiveData(student.cpf)}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">RG</label>
-                                        <p className="text-gray-900 font-mono">{maskSensitiveData(student.rg)}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Sexo</label>
-                                        <p className="text-gray-900">{student.gender || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Raça / Cor</label>
-                                        <p className="text-gray-900">{student.race || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Nacionalidade</label>
-                                        <p className="text-gray-900">{student.nationality || '-'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium text-gray-500 uppercase">Naturalidade</label>
-                                        <p className="text-gray-900">{student.birth_city || '-'}</p>
-                                    </div>
+                                    <Input label="NOME COMPLETO" value={student.name || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-medium cursor-default" />
+                                    <Input label="DATA DE NASCIMENTO" value={student.birth_date ? new Date(student.birth_date).toLocaleDateString('pt-BR') : '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                    <Input label="CPF" value={maskSensitiveData(student.cpf) || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-mono cursor-default" />
+                                    <Input label="RG" value={maskSensitiveData(student.rg) || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-mono cursor-default" />
+                                    <Input label="SEXO" value={student.gender || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                    <Input label="RAÇA / COR" value={student.race || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                    <Input label="NACIONALIDADE" value={student.nationality || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                    <Input label="NATURALIDADE" value={student.birth_city || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
                                 </div>
                             </Card>
 
@@ -528,23 +504,11 @@ export const StudentProfileView: FC = () => {
                                 </h3>
                                 {/* Address Parsing */}
                                 {student.address ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="col-span-2">
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Logradouro</label>
-                                            <p className="text-gray-900">{student.address.street}, {student.address.number}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Bairro</label>
-                                            <p className="text-gray-900">{student.address.neighbor}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">Cidade/UF</label>
-                                            <p className="text-gray-900">{student.address.city} - {student.address.state}</p>
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-medium text-gray-500 uppercase">CEP</label>
-                                            <p className="text-gray-900 font-mono">{student.address.zip_code}</p>
-                                        </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <Input containerClassName="md:col-span-2" label="LOGRADOURO" value={`${student.address.street || ''}${student.address.number ? `, ${student.address.number}` : ''}`} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="BAIRRO" value={student.address.neighbor || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="CIDADE/UF" value={`${student.address.city || ''} - ${student.address.state || ''}`} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="CEP" value={student.address.zip_code || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-mono cursor-default" />
                                     </div>
                                 ) : <p className="text-gray-400 italic">Endereço não cadastrado.</p>}
                             </Card>
@@ -793,31 +757,13 @@ export const StudentProfileView: FC = () => {
                                             <p className="text-xs text-gray-500">Principal Pagador</p>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-y-4 gap-x-6 text-sm">
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">CPF</p>
-                                            <p className="font-mono text-gray-700">{maskSensitiveData(student.financial_responsible.cpf)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">Email</p>
-                                            <p className="text-gray-700">{student.financial_responsible.email}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">Telefone</p>
-                                            <p className="text-gray-700">{student.financial_responsible.phone}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">RG</p>
-                                            <p className="text-gray-700">{maskSensitiveData(student.financial_responsible.rg)}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">Data de Nascimento</p>
-                                            <p className="text-gray-700">{student.financial_responsible.birth_date ? new Date(student.financial_responsible.birth_date).toLocaleDateString('pt-BR') : '-'}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-gray-500 font-medium uppercase text-[10px]">Nacionalidade</p>
-                                            <p className="text-gray-700">{student.financial_responsible.nationality || '-'}</p>
-                                        </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <Input label="CPF" value={maskSensitiveData(student.financial_responsible.cpf) || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-mono cursor-default" />
+                                        <Input label="EMAIL" value={student.financial_responsible.email || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="TELEFONE" value={student.financial_responsible.phone || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="RG" value={maskSensitiveData(student.financial_responsible.rg) || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 font-mono cursor-default" />
+                                        <Input label="DATA DE NASCIMENTO" value={student.financial_responsible.birth_date ? new Date(student.financial_responsible.birth_date).toLocaleDateString('pt-BR') : '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
+                                        <Input label="NACIONALIDADE" value={student.financial_responsible.nationality || '-'} readOnly className="bg-gray-50 border-gray-200 text-gray-900 cursor-default" />
                                     </div>
                                 </div>
                             ) : <p className="text-gray-400">Responsável financeiro não definido.</p>}

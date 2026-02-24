@@ -493,9 +493,18 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
 
                                 {/* Status Badge & Expand */}
                                 <div className="flex items-center gap-3">
-                                    <div>
-                                        {status === 'saved' && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-200 font-bold">Salvo</span>}
+                                    <div className="flex items-center gap-1.5">
                                         {status === 'unsaved' && <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded-full border border-amber-200 font-bold flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Alterado</span>}
+                                        {status === 'saved' && (
+                                            <>
+                                                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full border border-green-200 font-bold">Salvo</span>
+                                                {r.read_by_parents && r.read_by_parents.length > 0 && (
+                                                    <span className="text-[10px] bg-brand-100 text-brand-700 px-2 py-1 rounded-full border border-brand-200 font-bold flex items-center gap-1" title="Visto pelos pais">
+                                                        <CheckCircle2 className="w-3 h-3" /> Visto
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
                                     </div>
                                     <button
                                         onClick={() => setExpandedCardId(expandedCardId === item.student_id ? null : item.student_id)}
@@ -506,7 +515,7 @@ export const ClassDailyAgenda: FC<ClassDailyAgendaProps> = ({ classId, date }) =
                                 </div>
                             </div>
 
-                            <div className={`p-4 animate-in fade-in slide-in-from-top-2 duration-300 ${expandedCardId === item.student_id ? 'block' : 'hidden md:grid md:grid-cols-2 lg:grid-cols-12'} gap-6`}>
+                            <div className={`p-4 animate-in fade-in slide-in-from-top-2 duration-300 ${expandedCardId === item.student_id ? 'block md:grid md:grid-cols-2 lg:grid-cols-12' : 'hidden'} gap-6`}>
 
                                 {/* Routine Section - Hidden if Absent */}
                                 {isPresent && (

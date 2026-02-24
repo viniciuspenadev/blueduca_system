@@ -55,6 +55,7 @@ import CommunicationsDashboard from './views/admin/CommunicationsDashboard';
 import { LeadsKanban } from './views/admin/leads/LeadsKanban';
 import { DunningManagement } from './views/admin/DunningManagement';
 import { DirectorDashboard } from './views/admin/DirectorDashboard';
+import { ChatCenter } from './views/admin/chat/ChatCenter';
 
 import { LunchMenuManager } from './views/admin/LunchMenuManager';
 
@@ -143,6 +144,7 @@ export const AppRouter: FC<AppRouterProps> = ({ user, onLogin, onLogout }) => {
             />
             <Route path="/admin/comunicados/novo" element={<ProtectedRoute user={user} onLogout={onLogout} requiredModule="communications"><CommunicationsComposer /></ProtectedRoute>} />
             <Route path="/admin/cardapio" element={<ProtectedRoute user={user} onLogout={onLogout} requiredModule="menu"><LunchMenuManager /></ProtectedRoute>} />
+            <Route path="/admin/chat" element={<ProtectedRoute user={user} onLogout={onLogout} requiredModule="communications"><ChatCenter /></ProtectedRoute>} />
 
             {/* CRM / Leads */}
             <Route path="/admin/leads" element={<ProtectedRoute user={user} onLogout={onLogout} requiredModule="crm"><LeadsKanban /></ProtectedRoute>} />

@@ -76,6 +76,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (profileError) throw profileError;
 
+            // Restrict access for parents and students in the Admin Panel
+            if (profile.role === 'PARENT' || profile.role === 'STUDENT') {
+                addToast('error', 'Acesso negado. O Painel Administrativo é exclusivo para a equipe escolar.');
+                await supabase.auth.signOut();
+                setUser(null);
+                setCurrentSchool(null);
+                setLoading(false);
+                return;
+            }
+
             // 2. Fetch User's Memberships (IDs only)
             const { data: userMemberships, error: memberError } = await supabase
                 .from('school_members')

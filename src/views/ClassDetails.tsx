@@ -12,6 +12,7 @@ import { PlanningKanban } from './planning/components/PlanningKanban';
 import { PlanningCalendar } from './planning/components/PlanningCalendar';
 import { CustomDatePicker } from '../components/ui/CustomDatePicker';
 import { planningService } from '../services/planningService';
+import { ClassStudentDetailsDrawer } from '../components/ClassStudentDetailsDrawer';
 
 import {
     ArrowLeft,
@@ -318,9 +319,18 @@ export const ClassDetailsView: FC = () => {
 
             if (error) throw error;
 
-            // Filter out those already in THIS class
-            const currentStudentIds = enrollments.map(e => e.student_id);
-            const available = data ? data.filter(e => !currentStudentIds.includes(e.student_id)) : [];
+            // Nova Regra Ouro: Remover alunos que já estão matriculados em QUALQUER turma deste ano letivo
+            const { data: activeEnrollments, error: activeErr } = await supabase
+                .from('class_enrollments')
+                .select('student_id, classes!inner(school_year, school_id)')
+                .eq('classes.school_year', classData.school_year)
+                .eq('classes.school_id', currentSchool.id);
+
+            if (activeErr) console.error("Erro ao verificar vínculos existentes:", activeErr);
+
+            const enrolledStudentIds = activeEnrollments?.map(e => e.student_id) || [];
+
+            const available = data ? data.filter(e => !enrolledStudentIds.includes(e.student_id)) : [];
 
             setAvailableStudents(available);
         } catch (error) {
@@ -1445,61 +1455,14 @@ export const ClassDetailsView: FC = () => {
                 </div>
             </Modal>
 
-            {/* Student Details Modal */}
-            <Modal isOpen={isStudentModalOpen} onClose={() => setIsStudentModalOpen(false)} title="Detalhes do Aluno">
-                <div className="p-6">
-                    {selectedStudent && (
-                        <>
-                            {/* Header */}
-                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
-                                <div className="w-16 h-16 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xl uppercase overflow-hidden border-2 border-brand-200">
-                                    {selectedStudent.student?.photo_url ? (
-                                        <img src={selectedStudent.student.photo_url} className="w-full h-full object-cover" alt={selectedStudent.student?.name} />
-                                    ) : (
-                                        selectedStudent.student?.name?.substring(0, 2) || 'AL'
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <h2 className="text-2xl font-bold text-gray-900">{selectedStudent.student?.name}</h2>
-                                    <p className="text-sm text-gray-500 font-mono">Matrícula #{selectedStudent.enrollment_id.substring(0, 8)}</p>
-                                </div>
-                                <button
-                                    onClick={() => setIsStudentModalOpen(false)}
-                                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                                >
-                                    <X className="w-6 h-6" />
-                                </button>
-                            </div>
-
-                            {/* Content Placeholder */}
-                            <div className="space-y-4">
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                                    <p className="text-blue-900 font-medium mb-2">🚧 Modal em Construção</p>
-                                    <p className="text-sm text-blue-700">
-                                        Aqui serão exibidas as abas com informações detalhadas do aluno:
-                                        <br />
-                                        <span className="font-semibold">Perfil • Chamadas • Notas • Agenda</span>
-                                    </p>
-                                </div>
-
-                                {/* Quick Info */}
-                                <div className="grid grid-cols-2 gap-4 mt-6">
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Status</p>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-                                            <CheckCircle className="w-3.5 h-3.5" /> Ativo
-                                        </span>
-                                    </div>
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Frequência</p>
-                                        <p className="text-2xl font-bold text-gray-900">95%</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </Modal>
+            {/* Student Details Drawer */}
+            <ClassStudentDetailsDrawer
+                isOpen={isStudentModalOpen}
+                onClose={() => setIsStudentModalOpen(false)}
+                studentInfo={selectedStudent}
+                classId={id || ''}
+                schoolYear={classData.school_year}
+            />
         </>
     );
 };

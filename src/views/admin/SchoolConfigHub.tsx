@@ -30,6 +30,7 @@ import { SystemBehaviorSettings } from './SystemBehaviorSettings';
 import { TimelineSettings } from './TimelineSettings';
 import { EnrollmentDocsSettings } from './EnrollmentDocsSettings';
 import { UserManagement } from '../UserManagement';
+import { ChatPermissionsSettings } from './ChatPermissionsSettings';
 import { PlanLimitsCard } from './PlanLimitsCard';
 import { PlanUsageChart } from './PlanUsageChart';
 
@@ -62,6 +63,7 @@ export const SchoolConfigHub: FC = () => {
         { id: 'school', label: 'Escola', icon: School },
         { id: 'plan', label: 'Plano', icon: Star },
         { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
+        { id: 'chat_permissions', label: 'Atendimento', icon: MessageSquare },
         { id: 'finance', label: 'Financeiro', icon: DollarSign },
         { id: 'users', label: 'Usuários', icon: Users },
         { id: 'acad_general', label: 'Agendas', icon: Settings },
@@ -191,6 +193,14 @@ export const SchoolConfigHub: FC = () => {
                             embedded={true}
                             isProvisioned={!!provisionedModules['whatsapp']}
                         />
+                    </div>
+                )}
+
+                {activeTab === 'chat_permissions' && (
+                    <div className="animate-fade-in">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">Canais de Atendimento</h2>
+                        <p className="text-sm text-gray-500 mb-8 border-b border-gray-100 pb-4">Gerencie as permissões de acesso da equipe aos departamentos.</p>
+                        <ChatPermissionsSettings />
                     </div>
                 )}
 
