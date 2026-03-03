@@ -49,10 +49,26 @@ export const AttendanceChart: FC = () => {
         }
     };
 
-    if (loading) return <div className="h-40 animate-pulse bg-gray-50 rounded-xl" />;
+    if (loading) return (
+        <div className="bg-white rounded-3xl border border-gray-100/80 p-6 shadow-sm h-full flex flex-col justify-between animate-pulse">
+            <div className="flex justify-between items-start mb-4">
+                <div className="space-y-2">
+                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
+                    <div className="h-2 w-16 bg-gray-100 rounded"></div>
+                </div>
+                <div className="w-9 h-9 bg-gray-100 rounded-full"></div>
+            </div>
+            <div className="h-8 w-16 bg-gray-200 rounded mb-2"></div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mb-4"></div>
+            <div className="grid grid-cols-2 gap-3 mt-auto">
+                <div className="h-12 bg-gray-50 rounded-2xl"></div>
+                <div className="h-12 bg-gray-50 rounded-2xl"></div>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm h-full flex flex-col justify-between">
+        <div className="bg-white rounded-3xl border border-gray-100/80 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 h-full flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-[10px] lg:text-xs font-bold text-gray-500 uppercase tracking-wider">Presença Hoje</h3>
@@ -71,24 +87,28 @@ export const AttendanceChart: FC = () => {
             {/* Progress Bar */}
             <div className="w-full bg-gray-100 rounded-full h-2 mb-4 overflow-hidden">
                 <div
-                    className={`h-full rounded-full transition-all duration-1000 ${stats.rate >= 90 ? 'bg-green-500' : stats.rate >= 75 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                    className={`h-full rounded-full ${stats.rate >= 90 ? 'bg-green-500' : stats.rate >= 75 ? 'bg-blue-500' : 'bg-amber-500'}`}
                     style={{ width: `${stats.rate}%` }}
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-auto">
-                <div className="bg-green-50 rounded-lg p-2 flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
+            <div className="grid grid-cols-2 gap-3 mt-auto">
+                <div className="bg-green-50/70 hover:bg-green-50 rounded-2xl p-3 flex items-center gap-3 transition-colors border border-green-100/50">
+                    <div className="bg-green-100/50 p-1.5 rounded-xl">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
                     <div>
-                        <span className="block text-sm font-bold text-green-700">{stats.present}</span>
-                        <span className="text-[10px] text-green-600 uppercase">Presentes</span>
+                        <span className="block text-sm lg:text-base font-bold text-green-700 leading-tight">{stats.present}</span>
+                        <span className="text-[10px] text-green-600 font-medium uppercase tracking-wider">Presentes</span>
                     </div>
                 </div>
-                <div className="bg-red-50 rounded-lg p-2 flex items-center gap-2">
-                    <XCircle className="w-4 h-4 text-red-600" />
+                <div className="bg-red-50/70 hover:bg-red-50 rounded-2xl p-3 flex items-center gap-3 transition-colors border border-red-100/50">
+                    <div className="bg-red-100/50 p-1.5 rounded-xl">
+                        <XCircle className="w-4 h-4 text-red-600" />
+                    </div>
                     <div>
-                        <span className="block text-sm font-bold text-red-700">{stats.absent}</span>
-                        <span className="text-[10px] text-red-600 uppercase">Faltas</span>
+                        <span className="block text-sm lg:text-base font-bold text-red-700 leading-tight">{stats.absent}</span>
+                        <span className="text-[10px] text-red-600 font-medium uppercase tracking-wider">Faltas</span>
                     </div>
                 </div>
             </div>

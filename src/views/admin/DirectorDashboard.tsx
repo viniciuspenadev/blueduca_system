@@ -61,8 +61,42 @@ export const DirectorDashboard: FC = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600"></div>
+            <div className="space-y-6 pb-20 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div className="h-6 w-48 bg-slate-200 rounded mb-2"></div>
+                        <div className="h-4 w-64 bg-slate-100 rounded"></div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 bg-slate-100 rounded-lg"></div>
+                        <div className="h-10 w-48 bg-slate-100 rounded-xl"></div>
+                    </div>
+                </div>
+
+                {/* KPI Skeletons */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100/80 h-[140px] flex flex-col justify-between">
+                            <div className="w-10 h-10 bg-slate-100 rounded-lg"></div>
+                            <div>
+                                <div className="h-4 w-20 bg-slate-100 rounded mb-2"></div>
+                                <div className="h-6 w-32 bg-slate-200 rounded"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Charts Skeletons */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-sm border border-slate-100/80 h-[350px]">
+                        <div className="h-5 w-48 bg-slate-200 rounded mb-8"></div>
+                        <div className="w-full h-64 bg-slate-50 rounded-xl"></div>
+                    </div>
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100/80 h-[350px] flex flex-col justify-center items-center">
+                        <div className="w-48 h-48 bg-slate-100 rounded-full"></div>
+                    </div>
+                </div>
             </div>
         );
     }
@@ -82,7 +116,7 @@ export const DirectorDashboard: FC = () => {
     ];
 
     return (
-        <div className="space-y-6 animate-fade-in pb-20">
+        <div className="space-y-6 pb-20">
             {/* Header / Intro */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -126,7 +160,7 @@ export const DirectorDashboard: FC = () => {
 
             {/* KPI Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="p-4 lg:p-6 relative overflow-hidden group hover:shadow-xl transition-all border-none bg-gradient-to-br from-white to-brand-50">
+                <Card className="p-4 lg:p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-gradient-to-br from-white to-brand-50 relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-3 lg:mb-4">
                         <div className="p-2 bg-brand-100 rounded-lg text-brand-600">
                             <DollarSign size={18} className="lg:w-5 lg:h-5" />
@@ -144,7 +178,7 @@ export const DirectorDashboard: FC = () => {
                     </div>
                 </Card>
 
-                <Card className="p-4 lg:p-6 relative overflow-hidden group hover:shadow-xl transition-all border-none bg-gradient-to-br from-white to-emerald-50">
+                <Card className="p-4 lg:p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-gradient-to-br from-white to-emerald-50 relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-3 lg:mb-4">
                         <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
                             <CheckCircle2 size={18} className="lg:w-5 lg:h-5" />
@@ -162,7 +196,7 @@ export const DirectorDashboard: FC = () => {
                     </div>
                 </Card>
 
-                <Card className="p-4 lg:p-6 relative overflow-hidden group hover:shadow-xl transition-all border-none bg-gradient-to-br from-white to-amber-50">
+                <Card className="p-4 lg:p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-gradient-to-br from-white to-amber-50 relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-3 lg:mb-4">
                         <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
                             <Clock size={18} className="lg:w-5 lg:h-5" />
@@ -180,7 +214,7 @@ export const DirectorDashboard: FC = () => {
                     </div>
                 </Card>
 
-                <Card className="p-4 lg:p-6 relative overflow-hidden group hover:shadow-xl transition-all border-none bg-gradient-to-br from-white to-red-50">
+                <Card className="p-4 lg:p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-gradient-to-br from-white to-red-50 relative overflow-hidden group">
                     <div className="flex justify-between items-start mb-3 lg:mb-4">
                         <div className="p-2 bg-red-100 rounded-lg text-red-600">
                             <AlertCircle size={18} className="lg:w-5 lg:h-5" />
@@ -201,17 +235,17 @@ export const DirectorDashboard: FC = () => {
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2 p-4 lg:p-6 overflow-hidden border-none shadow-sm bg-white hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-center mb-6 lg:mb-8">
+                <div className="lg:col-span-2 p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] overflow-hidden bg-white flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
                         <div>
                             <h3 className="text-base lg:text-lg font-bold text-slate-800">Evolução Financeira</h3>
                             <p className="text-[10px] lg:text-xs text-slate-400">Últimos meses de faturamento</p>
                         </div>
                         <TrendingUp className="text-slate-300 lg:w-5 lg:h-5" size={18} />
                     </div>
-                    <div className="h-[220px] lg:h-[280px] w-full">
+                    <div className="h-[240px] w-full mt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={evolution}>
+                            <AreaChart data={evolution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#0284c7" stopOpacity={0.1} />
@@ -268,10 +302,10 @@ export const DirectorDashboard: FC = () => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </Card>
+                </div>
 
-                <Card className="p-4 lg:p-6 flex flex-col border-none shadow-sm bg-white hover:shadow-md transition-shadow h-full">
-                    <h3 className="text-base lg:text-lg font-bold text-slate-800 mb-4 lg:mb-6">Status dos Recebíveis</h3>
+                <div className="p-6 flex flex-col rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white h-full">
+                    <h3 className="text-base lg:text-lg font-bold text-slate-800 mb-6">Status dos Recebíveis</h3>
                     <div className="h-[200px] lg:h-[220px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -316,22 +350,22 @@ export const DirectorDashboard: FC = () => {
                             </div>
                         ))}
                     </div>
-                </Card>
+                </div>
             </div>
 
             {/* Engagement Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="p-4 lg:p-6">
-                    <div className="flex justify-between items-center mb-4 lg:mb-6">
+                <div className="p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white flex flex-col h-full">
+                    <div className="flex justify-between items-center mb-6">
                         <div>
                             <h3 className="text-base lg:text-lg font-bold text-slate-800">Acessos Diários</h3>
                             <p className="text-xs lg:text-sm text-slate-500">Usuários ativos na plataforma</p>
                         </div>
                         <Users className="text-slate-300 lg:w-5 lg:h-5" size={18} />
                     </div>
-                    <div className="h-[220px] lg:h-[250px] w-full">
+                    <div className="flex-1 w-full min-h-[220px] mt-2">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={engagement_daily}>
+                            <AreaChart data={engagement_daily} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.2} />
@@ -358,10 +392,10 @@ export const DirectorDashboard: FC = () => {
                             </AreaChart>
                         </ResponsiveContainer>
                     </div>
-                </Card>
+                </div>
 
-                <div className="space-y-6">
-                    <Card className="p-4 lg:p-6">
+                <div className="space-y-6 flex flex-col h-full justify-between">
+                    <div className="p-6 rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] bg-white">
                         <div className="flex justify-between items-center mb-3 lg:mb-4">
                             <h3 className="text-base lg:text-lg font-bold text-slate-800">Alcance de Comunicação</h3>
                             <MessageSquare className="text-brand-500 lg:w-5 lg:h-5" size={18} />
@@ -374,7 +408,7 @@ export const DirectorDashboard: FC = () => {
                                 </div>
                                 <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-brand-500 rounded-full shadow-sm shadow-brand-500/20 transition-all duration-1000"
+                                        className="h-full bg-brand-500 rounded-full shadow-sm shadow-brand-500/20"
                                         style={{ width: `${engagement.reading_rate}%` }}
                                     ></div>
                                 </div>
@@ -396,10 +430,10 @@ export const DirectorDashboard: FC = () => {
                                 </div>
                             </div>
                         </div>
-                    </Card>
+                    </div>
 
-                    <Card className="p-4 lg:p-6 bg-brand-900 text-white border-none shadow-xl shadow-brand-900/20">
-                        <h3 className="text-base lg:text-lg font-bold mb-3 lg:mb-4 flex items-center gap-2">
+                    <div className="p-6 rounded-3xl bg-brand-900 text-white border border-brand-800 shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.15)] flex flex-col">
+                        <h3 className="text-base lg:text-lg font-bold mb-4 flex items-center gap-2">
                             <Zap className="text-brand-300 lg:w-4.5 lg:h-4.5" size={16} />
                             Insights do Diretor
                         </h3>
@@ -419,7 +453,7 @@ export const DirectorDashboard: FC = () => {
                                 <p className="flex-1">Dados atualizados em: **{new Date(activeData.last_updated).toLocaleString('pt-BR')}**</p>
                             </div>
                         </div>
-                    </Card>
+                    </div>
                 </div>
             </div>
         </div>

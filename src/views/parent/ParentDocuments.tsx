@@ -81,7 +81,10 @@ export const ParentDocuments: FC = () => {
         setUploadingDoc(docId);
 
         try {
-            const sanitizedOriginalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+            const sanitizedOriginalName = file.name
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-zA-Z0-9.-]/g, '_');
             const fileName = `${docId}_${Date.now()}_${sanitizedOriginalName}`;
             const filePath = `enrollments/${enrollment.id}/${fileName}`;
 

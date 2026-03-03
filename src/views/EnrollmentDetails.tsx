@@ -7,7 +7,7 @@ import { Button, Card, Input, Modal, Select } from '../components/ui';
 import {
     Loader2, ArrowLeft, User, FileText,
     Upload, Building, CheckCircle,
-    ExternalLink, Trash2, Download, DollarSign, Calendar, Shield, RefreshCw, GraduationCap,
+    ExternalLink, Trash2, DollarSign, Calendar, Shield, RefreshCw, GraduationCap, Eye,
     UserPlus, X, Users, CheckCircle2, AlertCircle, Mail, Hash, MapPin, Search, Globe, Info, Activity, Droplet,
     FileWarning, HeartPulse, Clock, Camera
 } from 'lucide-react';
@@ -87,6 +87,10 @@ export const EnrollmentDetailsView: FC = () => {
     const [isCpfCheckLoading, setIsCpfCheckLoading] = useState(false);
     const [cpfCheckResult, setCpfCheckResult] = useState<any>(null);
     const [showCpfCheckModal, setShowCpfCheckModal] = useState(false);
+
+    // Document Viewer Modal State
+    const [viewDocModal, setViewDocModal] = useState<{ isOpen: boolean; url: string | null; type: 'img' | 'pdf' | null; title: string }>({ isOpen: false, url: null, type: null, title: '' });
+
 
     // handle CPF change and verify global status
     const handleCpfCheck = async (cpf: string) => {
@@ -674,8 +678,17 @@ export const EnrollmentDetailsView: FC = () => {
                 file = await processImage(file);
             }
 
+            // Sanitize file name to avoid "Invalid key" errors with special characters
+            const fileExt = file.name.split('.').pop() || '';
+            const baseName = file.name.includes('.') ? file.name.substring(0, file.name.lastIndexOf('.')) : file.name;
+            const safeBaseName = baseName
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Remove accents
+                .replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace spaces and special chars with underscores
+            const safeFileName = fileExt ? `${safeBaseName}.${fileExt}` : safeBaseName;
+
             // Path: enrollments/ID/docID_filename
-            const filePath = `enrollments/${id}/${docId}_${file.name}`;
+            const filePath = `enrollments/${id}/${docId}_${safeFileName}`;
 
             // 1. Upload to Storage
             const { error: uploadError } = await supabase.storage
@@ -688,7 +701,7 @@ export const EnrollmentDetailsView: FC = () => {
             const newDocMetadata = {
                 status: 'uploaded', // Pending approval
                 file_path: filePath,
-                file_name: file.name,
+                file_name: file.name, // Keep original name for display
                 uploaded_at: new Date().toISOString()
             };
 
@@ -769,7 +782,8 @@ export const EnrollmentDetailsView: FC = () => {
 
 
     const handleViewDoc = async (docId: string) => {
-        const path = details.documents?.[docId]?.file_path;
+        const doc = details.documents?.[docId];
+        const path = doc?.file_path;
         if (!path) return;
 
         try {
@@ -779,7 +793,13 @@ export const EnrollmentDetailsView: FC = () => {
 
             if (error) throw error;
             if (data?.signedUrl) {
-                window.open(data.signedUrl, '_blank');
+                const isPdf = path.toLowerCase().endsWith('.pdf');
+                setViewDocModal({
+                    isOpen: true,
+                    url: data.signedUrl,
+                    type: isPdf ? 'pdf' : 'img',
+                    title: `Visualizando: ${docId.replace(/_/g, ' ').toUpperCase()}`
+                });
             }
         } catch (err: any) {
             alert('Erro ao gerar link de visualização: ' + err.message);
@@ -1087,7 +1107,7 @@ export const EnrollmentDetailsView: FC = () => {
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl lg:text-2xl font-bold text-gray-900">{formData.candidate_name || 'Nova Matrícula'}</h1>
 
-                            {(enrollment?.student_id || enrollment?.details?.enrollment_type === 'renewal') && (
+                            {enrollment?.details?.enrollment_type === 'renewal' && (
                                 <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider border border-blue-200">
                                     Renovação
                                 </span>
@@ -1994,7 +2014,7 @@ export const EnrollmentDetailsView: FC = () => {
                                                             ) : (
                                                                 <>
                                                                     <Button size="sm" variant="ghost" title="Visualizar" onClick={() => handleViewDoc(docType.id)}>
-                                                                        <Download className="w-4 h-4 text-gray-600" />
+                                                                        <Eye className="w-4 h-4 text-gray-600" />
                                                                     </Button>
 
                                                                     {/* Admin Actions */}
@@ -2208,7 +2228,7 @@ export const EnrollmentDetailsView: FC = () => {
                                                             Minuta Disponível
                                                         </div>
                                                         <Button size="sm" variant="ghost" onClick={() => handleViewDoc('contract_draft')} title="Visualizar">
-                                                            <Download className="w-4 h-4 text-blue-600" />
+                                                            <Eye className="w-4 h-4 text-blue-600" />
                                                         </Button>
                                                         <Button size="sm" variant="ghost" onClick={() => handleDocAction('contract_draft', 'delete')} title="Excluir">
                                                             <Trash2 className="w-4 h-4 text-red-400" />
@@ -2257,7 +2277,7 @@ export const EnrollmentDetailsView: FC = () => {
                                                             {details.documents['contract_signed'].status === 'approved' ? 'Contrato Validado' : 'Aguardando Validação'}
                                                         </div>
                                                         <Button size="sm" variant="ghost" onClick={() => handleViewDoc('contract_signed')} title="Visualizar">
-                                                            <Download className="w-4 h-4 text-gray-600" />
+                                                            <Eye className="w-4 h-4 text-gray-600" />
                                                         </Button>
 
                                                         {details.documents['contract_signed'].status !== 'approved' && (
@@ -2799,6 +2819,47 @@ export const EnrollmentDetailsView: FC = () => {
                             onClick={() => setShowCpfCheckModal(false)}
                         >
                             Entendido
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Document Viewer Modal */}
+            <Modal
+                isOpen={viewDocModal.isOpen}
+                onClose={() => setViewDocModal({ isOpen: false, url: null, type: null, title: '' })}
+                title={viewDocModal.title}
+                size="xl"
+            >
+                <div className="w-full h-[70vh] flex items-center justify-center bg-gray-50 rounded-lg overflow-hidden relative">
+                    {viewDocModal.type === 'pdf' && viewDocModal.url ? (
+                        <iframe
+                            src={viewDocModal.url}
+                            className="w-full h-full border-0"
+                            title="Visualizar PDF"
+                        />
+                    ) : viewDocModal.type === 'img' && viewDocModal.url ? (
+                        <img
+                            src={viewDocModal.url}
+                            alt="Visualizar Documento"
+                            className="max-w-full max-h-full object-contain"
+                        />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center text-gray-400">
+                            <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                            <p>Carregando documento...</p>
+                        </div>
+                    )}
+
+                    <div className="absolute top-4 right-4 flex gap-2">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => window.open(viewDocModal.url as string, '_blank')}
+                            className="bg-white/90 backdrop-blur shadow-sm hover:bg-gray-100"
+                        >
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Abrir Externa
                         </Button>
                     </div>
                 </div>

@@ -5,6 +5,7 @@ import { NextEvents } from '../components/dashboard/NextEvents';
 import { AttendanceChart } from '../components/dashboard/AttendanceChart';
 import { StudentMoodChart } from '../components/dashboard/StudentMoodChart';
 import { UpcomingVisitsWidget } from '../components/dashboard/UpcomingVisitsWidget';
+import { AbsentStudentsWidget } from '../components/dashboard/AbsentStudentsWidget';
 import { usePlan } from '../hooks/usePlan';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,7 +17,7 @@ export const DashboardView: FC = () => {
         (user?.role === 'ADMIN' || user?.role === 'SECRETARY' || user?.role === 'SUPER_ADMIN');
 
     return (
-        <div className="space-y-4 lg:space-y-6 animate-fade-in pb-20">
+        <div className="space-y-4 lg:space-y-6 pb-20">
             {/* Header Section */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
@@ -42,9 +43,7 @@ export const DashboardView: FC = () => {
 
                     {/* Tasks List (Now at bottom of main column) */}
                     <section className="space-y-3">
-                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm min-h-[300px]">
-                            <TaskWidget />
-                        </div>
+                        <TaskWidget />
                     </section>
                 </div>
 
@@ -55,19 +54,18 @@ export const DashboardView: FC = () => {
 
                         {/* Recent Widget: Visits */}
                         {canSeeCRM && (
-                            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                                <UpcomingVisitsWidget />
-                            </div>
+                            <UpcomingVisitsWidget />
                         )}
 
-                        <div>
-                            {/* Next Events Widget */}
-                            {hasModule('academic') && (
-                                <div className="bg-white rounded-xl border border-gray-100 shadow-sm min-h-[380px] overflow-hidden">
-                                    <NextEvents />
-                                </div>
-                            )}
-                        </div>
+                        {/* Absent Students Widget */}
+                        {hasModule('academic') && (
+                            <AbsentStudentsWidget />
+                        )}
+
+                        {/* Next Events Widget */}
+                        {hasModule('academic') && (
+                            <NextEvents />
+                        )}
                     </section>
                 </div>
 

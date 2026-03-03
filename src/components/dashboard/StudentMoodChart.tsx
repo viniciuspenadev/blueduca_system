@@ -42,7 +42,28 @@ export const StudentMoodChart: FC = () => {
         }
     };
 
-    if (loading) return <div className="h-40 animate-pulse bg-gray-50 rounded-xl" />;
+    if (loading) return (
+        <div className="bg-white rounded-3xl border border-gray-100/80 p-6 shadow-sm h-full overflow-hidden flex flex-col animate-pulse">
+            <div className="flex justify-between items-start mb-4">
+                <div className="space-y-2">
+                    <div className="h-3 w-28 bg-gray-200 rounded"></div>
+                    <div className="h-2 w-20 bg-gray-100 rounded"></div>
+                </div>
+                <div className="w-9 h-9 bg-gray-100 rounded-2xl"></div>
+            </div>
+            <div className="space-y-4 mt-4">
+                {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="space-y-2">
+                        <div className="flex justify-between">
+                            <div className="h-3 w-16 bg-gray-200 rounded"></div>
+                            <div className="h-3 w-8 bg-gray-200 rounded"></div>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5"></div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 
     const getMoodIcon = (mood: string) => {
         switch (mood) {
@@ -57,13 +78,13 @@ export const StudentMoodChart: FC = () => {
     const getPercentage = (count: number) => total > 0 ? Math.round((count / total) * 100) : 0;
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm h-full overflow-hidden">
+        <div className="bg-white rounded-3xl border border-gray-100/80 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 h-full overflow-hidden flex flex-col">
             <div className="flex justify-between items-start mb-4">
                 <div>
                     <h3 className="text-[10px] lg:text-xs font-bold text-gray-500 uppercase tracking-wider">Humor dos Alunos</h3>
                     <p className="text-[10px] text-gray-400">Registrado hoje</p>
                 </div>
-                <div className="p-2 rounded-full bg-purple-50 text-purple-600">
+                <div className="p-2.5 rounded-2xl bg-purple-50 text-purple-600">
                     <Smile className="w-5 h-5" />
                 </div>
             </div>
@@ -78,12 +99,15 @@ export const StudentMoodChart: FC = () => {
                     {Object.entries(moods).map(([mood, count]) => (
                         <div key={mood} className="space-y-1">
                             <div className="flex justify-between text-xs font-medium text-gray-600">
-                                <span className="flex items-center gap-1.5 ">
-                                    {getMoodIcon(mood)} {mood}
+                                <span className="flex items-center gap-2 ">
+                                    <div className={`p-1 rounded-md ${mood === 'Feliz' ? 'bg-green-50' : mood === 'Cansado' ? 'bg-amber-50' : mood === 'Choroso' ? 'bg-blue-50' : 'bg-red-50'}`}>
+                                        {getMoodIcon(mood)}
+                                    </div>
+                                    {mood}
                                 </span>
-                                <span>{count} ({getPercentage(count)}%)</span>
+                                <span className="text-gray-900 font-bold">{count} <span className="text-[10px] text-gray-400 font-normal">({getPercentage(count)}%)</span></span>
                             </div>
-                            <div className="w-full bg-gray-50 rounded-full h-1.5 overflow-hidden">
+                            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                                 <div
                                     className={`h-full rounded-full ${mood === 'Feliz' ? 'bg-green-400' :
                                         mood === 'Cansado' ? 'bg-amber-400' :

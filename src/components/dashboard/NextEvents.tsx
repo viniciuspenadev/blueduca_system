@@ -73,24 +73,26 @@ export const NextEvents: FC = () => {
     );
 
     return (
-        <div className="h-full flex flex-col p-4">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900 flex items-center gap-2 text-lg">
-                    <Calendar className="w-5 h-5 text-brand-600" />
+        <div className="bg-white rounded-3xl border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-full flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center mb-4 px-6 pt-6 pb-2 border-b border-gray-50/50">
+                <h3 className="text-sm lg:text-base font-bold text-gray-900 flex items-center gap-2">
+                    <div className="p-2 bg-brand-50 rounded-xl text-brand-600">
+                        <Calendar className="w-4 h-4" />
+                    </div>
                     Próximos Eventos
                 </h3>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/agenda')} className="text-xs text-gray-500 hover:text-brand-600">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/agenda')} className="text-xs text-brand-600 hover:bg-brand-50 rounded-lg px-3">
                     Ver todos
                 </Button>
             </div>
 
-            <div className="flex-1 space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+            <div className="flex-1 space-y-3 overflow-y-auto px-6 pb-6 custom-scrollbar">
                 {events.length === 0 ? (
-                    <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl">
-                        <Calendar className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                        <p className="text-sm">Nenhum evento próximo</p>
-                        <Button variant="ghost" size="sm" onClick={() => navigate('/agenda')} className="mt-2 text-brand-600">
-                            Agendar novo corre
+                    <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-100 rounded-2xl flex flex-col justify-center items-center">
+                        <Calendar className="w-10 h-10 mb-3 opacity-20 text-gray-400" />
+                        <p className="text-sm font-medium">Nenhum evento próximo</p>
+                        <Button variant="ghost" size="sm" onClick={() => navigate('/agenda')} className="mt-3 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg">
+                            Agendar nova data
                         </Button>
                     </div>
                 ) : (
@@ -101,7 +103,7 @@ export const NextEvents: FC = () => {
                         const time = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                         return (
-                            <div key={event.id} className="flex gap-4 group cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors" onClick={() => navigate('/agenda')}>
+                            <div key={event.id} className="flex gap-4 group cursor-pointer bg-gray-50/40 border border-gray-100/60 p-3 rounded-2xl hover:bg-white hover:shadow-sm hover:border-gray-200 transition-all duration-300" onClick={() => navigate('/agenda')}>
                                 <div className="flex flex-col items-center justify-center bg-brand-50 rounded-xl w-14 h-14 shrink-0 text-brand-700">
                                     <span className="text-xs font-bold uppercase">{month}</span>
                                     <span className="text-xl font-bold leading-none">{day}</span>

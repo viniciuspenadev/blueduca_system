@@ -156,7 +156,7 @@ export const ClassListView: FC = () => {
     };
 
     return (
-        <div className="space-y-4 lg:space-y-8 animate-fade-in pb-20">
+        <div className="space-y-4 lg:space-y-8 pb-20">
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -174,7 +174,7 @@ export const ClassListView: FC = () => {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row gap-2 lg:gap-4 items-center bg-white p-1.5 lg:p-2 rounded-xl border border-gray-200 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-2 lg:gap-4 items-center bg-white p-1.5 lg:p-2 rounded-2xl border border-slate-100/80 shadow-sm">
                 <div className="flex-1 w-full relative group">
                     <Search className="absolute left-3 top-2.5 lg:top-3 w-4 h-4 lg:w-5 lg:h-5 text-gray-400 group-focus-within:text-brand-500 transition-colors" />
                     <input
@@ -231,7 +231,7 @@ export const ClassListView: FC = () => {
                             <div
                                 key={cls.id}
                                 onClick={() => navigate(`/turmas/${cls.id}`)}
-                                className="group bg-white rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:border-brand-200 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col"
+                                className="group bg-white rounded-3xl border border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:border-brand-200 transition-all duration-300 cursor-pointer relative overflow-hidden flex flex-col"
                             >
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-400 to-brand-600 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
 

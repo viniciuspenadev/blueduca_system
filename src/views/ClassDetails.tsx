@@ -517,9 +517,9 @@ export const ClassDetailsView: FC = () => {
             {/* =================================================================================
                 DESKTOP VIEW (Header, Stats, Tabs and Main Content)
                ================================================================================= */}
-            <div className="hidden md:block space-y-6 animate-fade-in pb-20">
+            <div className="hidden md:block space-y-6 pb-20">
                 {/* Header Corporativo */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                     <div className="p-6 lg:p-8">
                         {/* Top Actions */}
                         <div className="flex justify-between items-center mb-6">
@@ -584,7 +584,7 @@ export const ClassDetailsView: FC = () => {
                         {/* KPI Cards */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             {/* Card 1: Título da Turma */}
-                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                            <div className="bg-white border border-slate-100/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-2.5 rounded-lg bg-brand-50 flex-shrink-0">
                                         <GraduationCap className="w-5 h-5 text-brand-600" />
@@ -602,7 +602,7 @@ export const ClassDetailsView: FC = () => {
                             </div>
 
                             {/* Card 2: Professores */}
-                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                            <div className="bg-white border border-slate-100/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-2.5 rounded-lg bg-purple-50 flex-shrink-0">
                                         <UserCheck className="w-5 h-5 text-purple-600" />
@@ -620,7 +620,7 @@ export const ClassDetailsView: FC = () => {
                             </div>
 
                             {/* Card 3: Turno e Ano */}
-                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                            <div className="bg-white border border-slate-100/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-2.5 rounded-lg bg-amber-50 flex-shrink-0">
                                         <Sunrise className="w-5 h-5 text-amber-600" />
@@ -640,7 +640,7 @@ export const ClassDetailsView: FC = () => {
                             </div>
 
                             {/* Card 4: Alunos e Vagas */}
-                            <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-all cursor-pointer group">
+                            <div className="bg-white border border-slate-100/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                                 <div className="flex items-start gap-3">
                                     <div className="p-2.5 rounded-lg bg-green-50 flex-shrink-0">
                                         <UsersRound className="w-5 h-5 text-green-600" />
@@ -697,7 +697,7 @@ export const ClassDetailsView: FC = () => {
 
                 {/* Navigation Tabs (Desktop) */}
                 < div className="flex justify-center" >
-                    <div className="bg-white p-1 lg:p-1.5 rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 inline-flex gap-1 overflow-x-auto max-w-full">
+                    <div className="bg-white p-1 lg:p-1.5 rounded-2xl shadow-sm border border-slate-100/80 inline-flex gap-1 overflow-x-auto max-w-full">
                         {[
                             { id: 'students', label: 'Alunos', icon: Users },
                             { id: 'teachers', label: 'Professores', icon: GraduationCap },
@@ -729,11 +729,11 @@ export const ClassDetailsView: FC = () => {
                 </div >
 
                 {/* Content Area (Desktop) */}
-                < div className="min-h-[400px] animate-fade-in-up" >
+                < div className="min-h-[400px]" >
                     {activeTab === 'students' && (
                         <div className="space-y-4">
                             {/* Student Table Card */}
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
                                 {/* Toolbar */}
                                 <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex flex-col xl:flex-row gap-4 justify-between items-end xl:items-center">
                                     {/* Search */}

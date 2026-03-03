@@ -71,7 +71,17 @@ export const CompleteEnrollmentView: FC = () => {
     const uploadFile = async (file: File, docId: string) => {
         try {
             setUploading(true);
-            const filePath = `enrollments/${enrollment.id}/${docId}_${file.name}`;
+
+            // Sanitize file name to avoid "Invalid key" errors with special characters
+            const fileExt = file.name.split('.').pop() || '';
+            const baseName = file.name.includes('.') ? file.name.substring(0, file.name.lastIndexOf('.')) : file.name;
+            const safeBaseName = baseName
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Remove accents
+                .replace(/[^a-zA-Z0-9.-]/g, '_'); // Replace spaces and special chars with underscores
+            const safeFileName = fileExt ? `${safeBaseName}.${fileExt}` : safeBaseName;
+
+            const filePath = `enrollments/${enrollment.id}/${docId}_${safeFileName}`;
 
             // 1. Upload
             const { error: uploadError } = await supabase.storage
@@ -86,7 +96,7 @@ export const CompleteEnrollmentView: FC = () => {
                 ...existingDoc,
                 status: 'uploaded', // Reset status to uploaded (pending review)
                 file_path: filePath,
-                file_name: file.name,
+                file_name: file.name, // Keep original name for display
                 uploaded_at: new Date().toISOString(),
                 rejection_reason: null // Clear previous rejection reason
             };

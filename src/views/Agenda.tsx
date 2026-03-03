@@ -393,7 +393,7 @@ export const AgendaView: FC = () => {
     }, [viewDate, events, selectedDay, filterType]);
 
     return (
-        <div className="space-y-6 animate-fade-in pb-20">
+        <div className="space-y-6 pb-20">
             {/* Header Padronizado */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -432,7 +432,7 @@ export const AgendaView: FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/20 border border-slate-100 flex flex-col overflow-hidden min-h-[600px]">
+                    <div className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100/80 flex flex-col overflow-hidden min-h-[600px]">
                         <div className="grid grid-cols-7 bg-brand-50/50 border-b border-slate-100">
                             {DAYS.map(d => (
                                 <div key={d} className="py-5 text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
@@ -448,7 +448,7 @@ export const AgendaView: FC = () => {
 
                 {/* Sidebar Feed */}
                 <div className="w-[380px] flex flex-col gap-6">
-                    <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/30 flex flex-col overflow-hidden min-h-[700px]">
+                    <div className="bg-white rounded-3xl border border-slate-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col overflow-hidden min-h-[700px]">
                         <div className="p-2 bg-slate-50 rounded-3xl m-4 flex gap-1">
                             {['upcoming', 'past'].map(t => (
                                 <button
@@ -501,7 +501,7 @@ export const AgendaView: FC = () => {
                                         <h5 className="text-[10px] font-black uppercase text-slate-400 mb-5 tracking-[0.2em]">{dayKey}</h5>
                                         <div className="space-y-4">
                                             {dayEvents.map(e => (
-                                                <div key={e.id} onClick={() => openEditModal(e)} className="group rounded-3xl transition-all cursor-pointer overflow-hidden border bg-white border-slate-100 hover:border-brand-200 p-4">
+                                                <div key={e.id} onClick={() => openEditModal(e)} className="group rounded-3xl transition-all cursor-pointer overflow-hidden border bg-white border-slate-100/80 shadow-sm hover:shadow-md hover:border-brand-200 p-4">
                                                     <div className="flex justify-between items-center mb-2">
                                                         <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-slate-50 text-slate-600">
                                                             {new Date(e.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
